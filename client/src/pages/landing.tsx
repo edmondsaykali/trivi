@@ -8,6 +8,10 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
 export default function Landing() {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [username, setUsername] = useState('');
   const [showJoinSection, setShowJoinSection] = useState(false);
   const [gameCode, setGameCode] = useState('');
@@ -113,12 +117,12 @@ export default function Landing() {
   const isNameValid = username.trim().length > 0 && username.trim().length <= 10;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary/10 to-secondary/20">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 pt-12 sm:pt-24">
+      <div className="w-full max-w-md mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <div>
-            <h1 className="text-4xl font-bold text-foreground">Trivia, on the go</h1>
+            <h1 className="text-6xl sm:text-7xl font-bold" style={{ color: '#FF6B35' }}>Trivi</h1>
             <p className="text-muted-foreground">Challenge friends in real-time trivia battles. Quick rounds, first to 5 wins.</p>
           </div>
         </div>

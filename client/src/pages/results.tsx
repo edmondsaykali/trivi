@@ -227,36 +227,25 @@ export default function Results({ params }: ResultsProps) {
           </div>
         </div>
 
-        {/* Game History */}
+        {/* Simplified Game History */}
         {gameHistory.length > 0 && (
           <div className="bg-card rounded-2xl p-6 shadow-lg border">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Game History</h2>
-            <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Rounds</h2>
+            <div className="space-y-2">
               {gameHistory.map((item, idx) => (
-                <div key={idx} className="bg-background rounded-lg p-4 border">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Round {item.round} - Question {item.question}
-                    </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                      {item.questionType === 'multiple_choice' ? 'Multiple Choice' : 'Number Question'}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">{currentPlayer.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Answer: {item.player1Answer === 'no_answer' ? 'No answer' : item.player1Answer}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">{opponent.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Answer: {item.player2Answer === 'no_answer' ? 'No answer' : item.player2Answer}
-                      </p>
-                    </div>
-                  </div>
+                <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <span className="text-sm text-muted-foreground">Round {item.round}</span>
+                  <span className={`text-sm font-medium ${
+                    item.roundWinner === currentPlayer.id 
+                      ? 'text-green-600' 
+                      : item.roundWinner === opponent.id
+                      ? 'text-red-600'
+                      : 'text-muted-foreground'
+                  }`}>
+                    {item.roundWinner === currentPlayer.id ? '✓ Won' : 
+                     item.roundWinner === opponent.id ? '✗ Lost' : 
+                     '— Tied'}
+                  </span>
                 </div>
               ))}
             </div>

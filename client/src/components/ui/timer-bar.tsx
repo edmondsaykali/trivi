@@ -36,7 +36,7 @@ export function TimerBar({ deadline, className, minimal = false }: TimerBarProps
   if (minimal) {
     return (
       <div 
-        className={cn("h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-100", className)}
+        className={cn("h-full bg-primary transition-all duration-100", className)}
         style={{ width: `${percentage}%` }}
       />
     );

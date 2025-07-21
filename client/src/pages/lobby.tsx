@@ -12,6 +12,10 @@ interface LobbyProps {
 }
 
 export default function Lobby({ params }: LobbyProps) {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const gameId = parseInt(params.id);
   const { gameState, loading } = useGameState(gameId);
   const [isStarting, setIsStarting] = useState(false);
@@ -50,10 +54,7 @@ export default function Lobby({ params }: LobbyProps) {
     setIsStarting(true);
     try {
       await apiRequest('POST', `/api/games/${gameId}/start`, {});
-      toast({
-        title: "Game Started!",
-        description: "Get ready for the first question.",
-      });
+      // No toast needed, game will start
     } catch (error: any) {
       toast({
         variant: "destructive",

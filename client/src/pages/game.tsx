@@ -11,6 +11,16 @@ import { apiRequest } from '@/lib/queryClient';
 import { Home, Check, X, Clock } from 'lucide-react';
 import type { Question } from '@/types/game';
 import type { GameState, Player } from '@/types/game';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GameProps {
   params: { id: string };
@@ -63,6 +73,7 @@ export default function Game({ params }: GameProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [lastQuestionId, setLastQuestionId] = useState<string | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -230,7 +241,7 @@ export default function Game({ params }: GameProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation('/')}
+              onClick={() => setShowExitConfirm(true)}
               className="p-2"
             >
               <Home className="w-4 h-4" />
@@ -256,7 +267,7 @@ export default function Game({ params }: GameProps) {
         <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-6">
           <div className="space-y-4">
             {/* Integrated Timer Bar */}
-            <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden border border-border">
               <TimerBar deadline={game.questionDeadline || null} minimal />
             </div>
             
@@ -353,6 +364,24 @@ export default function Game({ params }: GameProps) {
           </div>
         )}
       </div>
+
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Game?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave? This will end the game and your opponent will win.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay in Game</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setLocation('/')}>
+              Leave Game
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
