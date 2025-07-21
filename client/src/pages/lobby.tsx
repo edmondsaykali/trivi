@@ -32,6 +32,23 @@ export default function Lobby({ params }: LobbyProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
+  // Check if other player left the lobby
+  useEffect(() => {
+    if (gameState && gameState.players.length < 2 && gameState.game.status === 'waiting') {
+      // Only show message if we previously had 2 players
+      const hadTwoPlayers = sessionStorage.getItem('trivi-had-two-players') === 'true';
+      if (hadTwoPlayers) {
+        toast({
+          title: "Player Left",
+          description: "The other player has left the lobby.",
+        });
+        sessionStorage.removeItem('trivi-had-two-players');
+      }
+    } else if (gameState && gameState.players.length === 2) {
+      sessionStorage.setItem('trivi-had-two-players', 'true');
+    }
+  }, [gameState, toast]);
+
   // Only handle actual browser close/refresh, not navigation within app
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -67,16 +84,7 @@ export default function Lobby({ params }: LobbyProps) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-pulse">
-            <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
-          </div>
-          <p className="text-muted-foreground">Loading lobby...</p>
-        </div>
-      </div>
-    );
+    return null; // Don't show loading screen
   }
 
   if (!gameState) {

@@ -94,15 +94,17 @@ export default function Game({ params }: GameProps) {
   useEffect(() => {
     if (gameState && gameState.players.length < 2 && gameState.game.status === 'playing') {
       toast({
-        title: "Opponent left",
-        description: "Your opponent has left the game. You win!",
+        title: "Game Ended",
+        description: "Your opponent has left the game.",
       });
-      // Wait a moment for the backend to process
+      // Redirect to home page
       setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+        sessionStorage.removeItem('trivi-session');
+        sessionStorage.removeItem('trivi-game-id');
+        setLocation('/');
+      }, 1500);
     }
-  }, [gameState, toast]);
+  }, [gameState, toast, setLocation]);
 
   // Scroll to top on component mount  
   useEffect(() => {
@@ -167,14 +169,7 @@ export default function Game({ params }: GameProps) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading game...</p>
-        </div>
-      </div>
-    );
+    return null; // Don't show loading screen
   }
 
   if (error || !gameState) {

@@ -802,6 +802,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           winnerId: remainingPlayer.id
         });
         console.log(`Game ${gameId}: Player ${leavingPlayer.name} left. ${remainingPlayer.name} wins by default.`);
+      } else if (game.status === 'waiting') {
+        // If game is in lobby, just update player count
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
       }
       
       res.json({ message: "Left game successfully" });
