@@ -173,7 +173,7 @@ async function processRound(gameId: number, round: number, question: number) {
   
   // Determine winner based on question type
   const questionData = game.questionData as any;
-  if (questionData?.type === 'multipleChoice') {
+  if (questionData?.type === 'multiple_choice') {
     const correctAnswers = answers.filter(a => parseInt(a.answer) === questionData.correct);
     
     if (correctAnswers.length === 1) {

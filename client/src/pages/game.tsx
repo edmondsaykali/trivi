@@ -221,7 +221,7 @@ export default function Game({ params }: GameProps) {
             )}
           </div>
 
-          {question.type === 'multipleChoice' && question.options ? (
+          {question.type === 'multiple_choice' && question.options ? (
             <div className="space-y-3">
               {question.options.map((option, index) => (
                 <button

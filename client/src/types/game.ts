@@ -1,6 +1,6 @@
 export interface Question {
   text: string;
-  type: 'multipleChoice' | 'integer';
+  type: 'multiple_choice' | 'integer';
   options?: string[];
   correct: number;
   category: string;
