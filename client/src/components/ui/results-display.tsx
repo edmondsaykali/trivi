@@ -109,7 +109,17 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
             const userAnswer = answer ? answer.answer : 'no_answer';
             const isWinner = player.id === winnerId;
             const isExact = userAnswer !== 'no_answer' && parseInt(userAnswer) === correctAnswer;
-            const submissionTime = answer ? new Date(answer.submittedAt).toLocaleTimeString() : null;
+            
+            // Calculate elapsed time instead of timestamp
+            let elapsedTime = null;
+            if (answer && answer.submittedAt && game.questionDeadline) {
+              const submitTime = new Date(answer.submittedAt).getTime();
+              const questionStartTime = new Date(game.questionDeadline).getTime() - 15000; // 15 seconds before deadline
+              const elapsed = Math.round((submitTime - questionStartTime) / 1000);
+              if (elapsed > 0 && elapsed <= 15) {
+                elapsedTime = `${elapsed}s`;
+              }
+            }
             
             return (
               <div key={player.id} className="flex items-center justify-between">
@@ -124,9 +134,9 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
                   }`}>
                     {userAnswer === 'no_answer' ? 'No answer' : userAnswer}
                   </div>
-                  {userAnswer !== 'no_answer' && submissionTime && (
+                  {userAnswer !== 'no_answer' && elapsedTime && (
                     <span className="text-xs text-muted-foreground">
-                      {submissionTime}
+                      {elapsedTime}
                     </span>
                   )}
                 </div>

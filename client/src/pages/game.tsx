@@ -128,6 +128,16 @@ export default function Game({ params }: GameProps) {
   const submitAnswer = async (answer: string | number) => {
     if (hasAnswered || isSubmitting) return;
     
+    // Check if deadline has passed
+    if (gameState?.game.questionDeadline) {
+      const now = new Date().getTime();
+      const deadline = new Date(gameState.game.questionDeadline).getTime();
+      if (now > deadline) {
+        // Time's up, don't submit
+        return;
+      }
+    }
+    
     setIsSubmitting(true);
     try {
       await apiRequest('POST', `/api/games/${gameId}/answer`, {
@@ -279,6 +289,7 @@ export default function Game({ params }: GameProps) {
               {question.options.map((option, index) => (
                 <button
                   key={index}
+                  type="button"
                   onClick={() => handleMultipleChoice(index)}
                   disabled={hasAnswered || isSubmitting}
                   className={`w-full text-left p-4 border-2 rounded-xl transition-all group ${
@@ -288,6 +299,7 @@ export default function Game({ params }: GameProps) {
                       ? 'border-muted bg-muted/50 cursor-not-allowed'
                       : 'border-border hover:border-primary hover:bg-primary/5'
                   }`}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <div className="flex items-center">
                     <span className="font-medium text-foreground">{option}</span>

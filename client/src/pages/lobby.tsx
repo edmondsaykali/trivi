@@ -160,13 +160,15 @@ export default function Lobby({ params }: LobbyProps) {
 
         {/* Start Button */}
         {canStart && (
-          <Button
-            onClick={startGame}
-            disabled={isStarting}
-            className="w-full py-3 rounded-xl font-medium"
-          >
-            {isStarting ? 'Starting...' : 'Start Game'}
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              onClick={startGame}
+              disabled={isStarting}
+              className="py-3 px-8 rounded-xl font-medium"
+            >
+              {isStarting ? 'Starting...' : 'Start Game'}
+            </Button>
+          </div>
         )}
         
         {!isCreator && players.length === 2 && (
