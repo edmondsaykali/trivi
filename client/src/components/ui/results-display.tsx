@@ -31,53 +31,37 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
             <p className="text-muted-foreground">{question.text}</p>
           </div>
 
-          {/* Show both players' answers */}
-          <div className="space-y-4">
+          {/* Show both players' answers - Simplified */}
+          <div className="space-y-3">
             {[
-              { player: currentPlayer, answer: currentPlayerAnswer, label: "You" },
+              { player: currentPlayer, answer: currentPlayerAnswer, label: currentPlayer.name === opponent.name ? "You" : currentPlayer.name },
               { player: opponent, answer: opponentAnswer, label: opponent.name }
             ].map(({ player, answer, label }) => {
               const selectedIndex = answer ? parseInt(answer.answer) : -1;
               const isCorrect = selectedIndex === correctIndex;
+              const answerText = selectedIndex >= 0 && question.options ? question.options[selectedIndex] : 'No answer';
               
               return (
-                <div key={player.id} className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <PlayerAvatar src={player.avatar} alt={`${player.name}'s avatar`} className="w-8 h-8" />
-                    <span className="font-medium">{label}</span>
-                    {answer && answer.answer !== 'no_answer' ? (
-                      isCorrect ? (
-                        <Check className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <X className="w-5 h-5 text-red-500" />
-                      )
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No answer</span>
-                    )}
-                  </div>
-                  <div className={`p-3 rounded-lg border-2 ${
+                <div key={player.id} className="flex items-center justify-between">
+                  <span className="font-medium text-foreground">{label}</span>
+                  <div className={`px-3 py-1 rounded text-sm font-medium ${
                     !answer || answer.answer === 'no_answer' 
-                      ? 'border-gray-200 bg-gray-50' 
+                      ? 'bg-gray-100 text-gray-600' 
                       : isCorrect 
-                        ? 'border-green-200 bg-green-50' 
-                        : 'border-red-200 bg-red-50'
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
                   }`}>
-                    <div className="text-sm">
-                      <span className="font-medium">Answer: </span>
-                      {selectedIndex >= 0 && question.options ? question.options[selectedIndex] : 'No answer'}
-                    </div>
+                    {answerText}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Show correct answer */}
-          <div className="bg-green-100 border border-green-200 rounded-lg p-3">
-            <div className="text-sm text-green-800">
-              <span className="font-medium">Correct Answer: </span>
-              {question.options?.[correctIndex] || question.correct}
-            </div>
+          {/* Show correct answer - Simple */}
+          <div className="text-center">
+            <span className="text-sm text-muted-foreground">Correct Answer: </span>
+            <span className="text-sm font-medium text-foreground">{question.options?.[correctIndex] || question.correct}</span>
           </div>
 
           {/* Round result for Q1 */}
@@ -119,56 +103,42 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
           <p className="text-muted-foreground">{question.text}</p>
         </div>
 
-        {/* Show both players' answers with winner highlight */}
-        <div className="space-y-4">
+        {/* Show both players' answers - Simplified */}
+        <div className="space-y-3">
           {playerAnswers.map(({ player, answer, label }) => {
             const userAnswer = answer ? answer.answer : 'no_answer';
             const isWinner = player.id === winnerId;
             const isExact = userAnswer !== 'no_answer' && parseInt(userAnswer) === correctAnswer;
+            const submissionTime = answer ? new Date(answer.submittedAt).toLocaleTimeString() : null;
             
             return (
-              <div key={player.id} className="space-y-2">
+              <div key={player.id} className="flex items-center justify-between">
+                <span className="font-medium text-foreground">{label}</span>
                 <div className="flex items-center space-x-2">
-                  <PlayerAvatar src={player.avatar} alt={`${player.name}'s avatar`} className="w-8 h-8" />
-                  <span className="font-medium">{label}</span>
-                  {isWinner && (
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                      Round Winner!
+                  <div className={`px-3 py-1 rounded text-sm font-medium ${
+                    userAnswer === 'no_answer' 
+                      ? 'bg-gray-100 text-gray-600' 
+                      : isWinner 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                  }`}>
+                    {userAnswer === 'no_answer' ? 'No answer' : userAnswer}
+                  </div>
+                  {userAnswer !== 'no_answer' && submissionTime && (
+                    <span className="text-xs text-muted-foreground">
+                      {submissionTime}
                     </span>
                   )}
-                </div>
-                <div className={`p-3 rounded-lg border-2 ${
-                  isWinner 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-red-200 bg-red-50'
-                }`}>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm">
-                      <span className="font-medium">Answer: </span>
-                      {userAnswer === 'no_answer' ? 'No answer' : userAnswer}
-                    </div>
-                    {userAnswer !== 'no_answer' && (
-                      <div className="text-xs text-muted-foreground">
-                        {isExact ? (
-                          <span className="text-green-600 font-medium">Exact!</span>
-                        ) : (
-                          <span>Off by: {Math.abs(parseInt(userAnswer) - correctAnswer)}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Show correct answer */}
-        <div className="bg-green-100 border border-green-200 rounded-lg p-3">
-          <div className="text-sm text-green-800">
-            <span className="font-medium">Correct Answer: </span>
-            {correctAnswer}
-          </div>
+        {/* Show correct answer - Simple */}
+        <div className="text-center">
+          <span className="text-sm text-muted-foreground">Correct Answer: </span>
+          <span className="text-sm font-medium text-foreground">{correctAnswer}</span>
         </div>
 
         {/* Updated scores */}

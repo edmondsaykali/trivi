@@ -174,7 +174,7 @@ export default function Landing() {
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
           showJoinSection ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="bg-card rounded-2xl p-6 shadow-lg space-y-4 mt-4">
+          <div className="bg-card/50 rounded-2xl p-6 space-y-4 mt-4">
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Ask your friend for the 4-digit code</p>
             </div>
@@ -192,7 +192,7 @@ export default function Landing() {
                     joinGame();
                   }
                 }}
-                className="w-full text-center text-2xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full text-center text-2xl font-bold py-4 px-6 border border-border rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               
               <div className="flex space-x-3">

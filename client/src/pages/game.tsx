@@ -289,17 +289,8 @@ export default function Game({ params }: GameProps) {
                       : 'border-border hover:border-primary hover:bg-primary/5'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                      selectedAnswer === index
-                        ? 'bg-primary text-primary-foreground'
-                        : hasAnswered
-                        ? 'bg-muted text-muted-foreground'
-                        : 'bg-muted text-foreground group-hover:bg-primary group-hover:text-primary-foreground'
-                    }`}>
-                      {String.fromCharCode(65 + index)}
-                    </div>
-                    <span className="font-medium text-slate-900">{option}</span>
+                  <div className="flex items-center">
+                    <span className="font-medium text-foreground">{option}</span>
                   </div>
                 </button>
               ))}
@@ -342,22 +333,7 @@ export default function Game({ params }: GameProps) {
           </div>
         )}
 
-        {/* Strategy Tip for Integer Questions */}
-        {question.type === 'integer' && !hasAnswered && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </div>
-              <div className="text-sm text-amber-800">
-                <p className="font-medium">Strategy Tip</p>
-                <p>If both answers are wrong, the closest guess wins. Speed matters for tie-breakers!</p>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Exit Confirmation Dialog */}

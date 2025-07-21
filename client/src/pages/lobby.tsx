@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { PlayerAvatar } from '@/components/ui/player-avatar';
+
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -124,56 +124,39 @@ export default function Lobby({ params }: LobbyProps) {
         </div>
         
         {/* Game Code */}
-        <div className="text-center">
-          <div className="bg-card rounded-xl p-4 border">
-            <p className="text-xs text-muted-foreground mb-1">Game Code</p>
-            <div className="text-3xl font-bold text-primary tracking-wider">{game.code}</div>
-          </div>
+        <div className="text-center space-y-2">
+          <p className="text-xs text-muted-foreground">Game Code</p>
+          <div className="text-3xl font-bold text-primary tracking-wider">{game.code}</div>
         </div>
 
-        {/* Players List */}
-        <div className="bg-card rounded-xl p-4 border">
-          <div className="space-y-3">
-            {players.map((player) => (
-              <div key={player.id} className="flex items-center space-x-3">
-                <PlayerAvatar 
-                  src={player.avatar} 
-                  alt={`${player.name}'s avatar`}
-                  className="w-10 h-10"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {player.name}
-                    {player.id === currentPlayer?.id && " (You)"}
-                    {player.id === game.creatorId && " (Host)"}
-                  </p>
-                </div>
-              </div>
-            ))}
-            
-            {players.length < 2 && (
-              <div className="flex items-center space-x-3 opacity-50">
-                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Waiting for player...</p>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Simple separator line */}
+        <div className="flex justify-center">
+          <div className="w-16 h-px bg-border"></div>
+        </div>
+
+        {/* Players List - Simple */}
+        <div className="space-y-3">
+          {players.map((player) => (
+            <div key={player.id} className="text-center">
+              <p className="text-sm font-medium text-foreground">
+                {player.name}
+                {player.id === currentPlayer?.id && " (You)"}
+                {player.id === game.creatorId && " (Host)"}
+              </p>
+            </div>
+          ))}
+          
+          {players.length < 2 && (
+            <div className="text-center opacity-50">
+              <p className="text-sm text-muted-foreground">Waiting for player...</p>
+            </div>
+          )}
         </div>
 
         {/* Status */}
-        {players.length < 2 ? (
+        {players.length < 2 && (
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Waiting for another player...</p>
-          </div>
-        ) : (
-          <div className="text-center">
-            <p className="text-sm text-green-600">Ready to start!</p>
           </div>
         )}
 
