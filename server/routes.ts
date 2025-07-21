@@ -127,15 +127,24 @@ function generateGameCode(): string {
 }
 
 function getRandomAvatar(): string {
-  const avatars = [
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1494790108755-2616b9d884c0?w=150&h=150&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&h=150&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1?w=150&h=150&fit=crop&crop=face"
-  ];
-  return avatars[Math.floor(Math.random() * avatars.length)];
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+  const shapes = ['circle', 'square', 'hexagon', 'triangle'];
+  
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  const shape = shapes[Math.floor(Math.random() * shapes.length)];
+  
+  // Generate SVG avatar as data URL
+  const svg = `
+    <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+      <rect width="150" height="150" fill="${color.replace('#', '%23')}" opacity="0.1"/>
+      ${shape === 'circle' ? `<circle cx="75" cy="75" r="40" fill="${color.replace('#', '%23')}"/>` :
+        shape === 'square' ? `<rect x="35" y="35" width="80" height="80" fill="${color.replace('#', '%23')}"/>` :
+        shape === 'hexagon' ? `<polygon points="75,35 110,55 110,95 75,115 40,95 40,55" fill="${color.replace('#', '%23')}"/>` :
+        `<polygon points="75,35 105,95 45,95" fill="${color.replace('#', '%23')}"/>`}
+    </svg>
+  `;
+  
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 async function getRandomQuestion(type: 'multiple_choice' | 'integer') {
@@ -186,7 +195,14 @@ async function processRound(gameId: number, round: number, question: number) {
     } else {
       // Both wrong, no winner this question, move to question 2
       if (question === 1) {
-        await startNextQuestion(gameId, round, 2);
+        // Show waiting state for results before moving to question 2
+        await storage.updateGame(gameId, {
+          waitingForAnswers: true,
+          lastRoundWinnerId: null
+        });
+        setTimeout(async () => {
+          await startNextQuestion(gameId, round, 2);
+        }, 3000);
         return;
       }
     }
@@ -238,10 +254,10 @@ async function processRound(gameId: number, round: number, question: number) {
         return;
       }
       
-      // Move to next round after 3 seconds
+      // Move to next round after 5 seconds (time to show results)
       setTimeout(async () => {
         await startNextQuestion(gameId, round + 1, 1);
-      }, 3000);
+      }, 5000);
     }
   }
 }
@@ -393,6 +409,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get answers for a specific round/question (for results display)
+  app.get("/api/games/:id/answers", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { round, question } = req.query;
+      
+      if (!round || !question) {
+        return res.status(400).json({ message: "Round and question parameters required" });
+      }
+      
+      const answers = await storage.getAnswersByGameRound(
+        gameId, 
+        parseInt(round as string), 
+        parseInt(question as string)
+      );
+      
+      res.json(answers);
+    } catch (error) {
+      console.error("Error getting answers:", error);
+      res.status(500).json({ message: "Failed to get answers" });
+    }
+  });
+
   // Submit answer
   app.post("/api/games/:id/answer", async (req, res) => {
     try {
@@ -451,6 +490,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Leave game (for disconnection handling)
+  app.post("/api/games/:id/leave", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID required" });
+      }
+      
+      // Remove player from game
+      await storage.removePlayerFromGame(gameId, sessionId);
+      
+      res.json({ message: "Left game successfully" });
+    } catch (error) {
+      console.error("Error leaving game:", error);
+      res.status(500).json({ message: "Failed to leave game" });
+    }
+  });
+
+  // Heartbeat endpoint to detect player disconnections
+  app.post("/api/games/:id/heartbeat", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID required" });
+      }
+      
+      // Update player's last seen timestamp
+      await storage.updatePlayerHeartbeat(sessionId);
+      
+      res.json({ message: "Heartbeat received" });
+    } catch (error) {
+      console.error("Error updating heartbeat:", error);
+      res.status(500).json({ message: "Failed to update heartbeat" });
+    }
+  });
+
   // Get game state
   app.get("/api/games/:id", async (req, res) => {
     try {

@@ -115,10 +115,12 @@ Preferred communication style: Simple, everyday language.
 - Environment-based configuration
 
 ### Database Strategy
-- Current: In-memory storage for development
-- Future: PostgreSQL with Drizzle migrations
+- Current: PostgreSQL via Supabase with Drizzle ORM (fully implemented)
+- Real-time updates: Direct API polling (1-second intervals)
 - Connection via `DATABASE_URL` environment variable
-- Schema defined in `shared/schema.ts` with proper relationships
+- Schema defined in `shared/schema.ts` with complete relationships
+- Minimalist SVG avatars replace human photos
+- Question-by-question results display implemented
 
 ### Session Management
 - Browser sessionStorage for client state

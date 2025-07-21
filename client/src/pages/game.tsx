@@ -3,14 +3,195 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TimerBar } from '@/components/ui/timer-bar';
+import { PlayerAvatar } from '@/components/ui/player-avatar';
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, X, Clock } from 'lucide-react';
 import type { Question } from '@/types/game';
+import type { GameState, Player } from '@/types/game';
 
 interface GameProps {
   params: { id: string };
+}
+
+interface QuestionResultsModalProps {
+  gameState: GameState;
+  currentPlayer: Player;
+  opponent: Player;
+}
+
+// Component to show results after each question
+function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionResultsModalProps) {
+  const { game } = gameState;
+  const question = game.questionData as Question;
+  const winner = gameState.players.find(p => p.id === game.lastRoundWinnerId);
+  
+  // For now, we'll fetch the answers client-side - in production this would come from server
+  const [answers, setAnswers] = useState<any[]>([]);
+  
+  useEffect(() => {
+    // Simulate fetching answers for this round
+    const fetchAnswers = async () => {
+      try {
+        const response = await fetch(`/api/games/${game.id}/answers?round=${game.currentRound}&question=${game.currentQuestion}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAnswers(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch answers:', error);
+      }
+    };
+    
+    fetchAnswers();
+  }, [game.id, game.currentRound, game.currentQuestion]);
+  
+  const currentPlayerAnswer = answers.find(a => a.playerId === currentPlayer.id);
+  const opponentAnswer = answers.find(a => a.playerId === opponent.id);
+  
+  if (question?.type === 'multiple_choice') {
+    const correctIndex = question.options?.findIndex((opt, index) => index === question.correct) ?? -1;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+        <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Question Results</h2>
+            <p className="text-muted-foreground">{question.text}</p>
+          </div>
+
+          {/* Show both players' answers */}
+          <div className="space-y-4">
+            {[
+              { player: currentPlayer, answer: currentPlayerAnswer, label: "You" },
+              { player: opponent, answer: opponentAnswer, label: opponent.name }
+            ].map(({ player, answer, label }) => {
+              const selectedIndex = answer ? parseInt(answer.answer) : -1;
+              const isCorrect = selectedIndex === correctIndex;
+              
+              return (
+                <div key={player.id} className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <PlayerAvatar src={player.avatar} alt={`${player.name}'s avatar`} className="w-8 h-8" />
+                    <span className="font-medium">{label}</span>
+                    {isCorrect ? (
+                      <Check className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <X className="w-5 h-5 text-red-500" />
+                    )}
+                  </div>
+                  <div className={`p-3 rounded-lg border-2 ${
+                    isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                  }`}>
+                    <div className="text-sm">
+                      <span className="font-medium">Answer: </span>
+                      {selectedIndex >= 0 && question.options ? question.options[selectedIndex] : 'No answer'}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Show correct answer */}
+          <div className="bg-green-100 border border-green-200 rounded-lg p-3">
+            <div className="text-sm text-green-800">
+              <span className="font-medium">Correct Answer: </span>
+              {question.correct}
+            </div>
+          </div>
+
+          {/* Winner announcement */}
+          {winner && (
+            <div className="text-center p-4 bg-primary/10 rounded-lg">
+              <h3 className="font-bold text-primary">{winner.name} wins the round!</h3>
+            </div>
+          )}
+
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              {game.currentQuestion === 1 ? 'Next question coming up...' : 'Next round starting...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Integer question results
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+      <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Question Results</h2>
+          <p className="text-muted-foreground">{question.text}</p>
+        </div>
+
+        {/* Show both players' answers with timing */}
+        <div className="space-y-4">
+          {[
+            { player: currentPlayer, answer: currentPlayerAnswer, label: "You" },
+            { player: opponent, answer: opponentAnswer, label: opponent.name }
+          ].map(({ player, answer, label }) => {
+            const playerAnswer = answer ? parseInt(answer.answer) : null;
+            const isCorrect = playerAnswer === question.correct;
+            const distance = playerAnswer !== null ? Math.abs(playerAnswer - question.correct) : Infinity;
+            
+            return (
+              <div key={player.id} className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <PlayerAvatar src={player.avatar} alt={`${player.name}'s avatar`} className="w-8 h-8" />
+                  <span className="font-medium">{label}</span>
+                  {isCorrect && <Check className="w-5 h-5 text-green-600" />}
+                </div>
+                <div className={`p-3 rounded-lg border-2 ${
+                  isCorrect ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'
+                }`}>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm">
+                        <span className="font-medium">Answer: </span>
+                        {playerAnswer ?? 'No answer'}
+                      </div>
+                      {!isCorrect && playerAnswer !== null && (
+                        <div className="text-xs text-muted-foreground">
+                          Distance: {distance}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>{answer ? Math.floor((new Date(answer.submittedAt).getTime() - new Date(game.questionDeadline!).getTime() + 15000) / 1000) : '--'}s</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Show correct answer */}
+        <div className="bg-green-100 border border-green-200 rounded-lg p-3">
+          <div className="text-sm text-green-800">
+            <span className="font-medium">Correct Answer: </span>
+            {question.correct}
+          </div>
+        </div>
+
+        {/* Winner announcement */}
+        {winner && (
+          <div className="text-center p-4 bg-primary/10 rounded-lg">
+            <h3 className="font-bold text-primary">{winner.name} wins the round!</h3>
+          </div>
+        )}
+
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Next round starting...</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Game({ params }: GameProps) {
@@ -131,42 +312,8 @@ export default function Game({ params }: GameProps) {
   }
 
   // Show result modal if waiting for answers to be processed
-  if (game.waitingForAnswers && game.lastRoundWinnerId) {
-    const winner = gameState.players.find(p => p.id === game.lastRoundWinnerId);
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="bg-card rounded-2xl p-6 w-full max-w-md space-y-6 transform animate-pulse shadow-lg border">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">Round Winner</h2>
-            <p className="text-lg text-muted-foreground">{winner?.name}</p>
-          </div>
-
-          <div className="flex justify-center space-x-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">{currentPlayer.score}</div>
-              <div className="text-sm text-muted-foreground">You</div>
-            </div>
-            <div className="text-center text-muted-foreground self-center">
-              <div className="text-lg">vs</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-yellow-500">{opponent.score}</div>
-              <div className="text-sm text-muted-foreground">{opponent.name}</div>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Next question coming up...</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (game.waitingForAnswers) {
+    return <QuestionResultsModal gameState={gameState} currentPlayer={currentPlayer} opponent={opponent} />;
   }
 
   return (
@@ -208,13 +355,11 @@ export default function Game({ params }: GameProps) {
         {/* Question Card */}
         <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-6">
           <div className="text-center space-y-2">
-            <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
-              question.type === 'multiple_choice' 
-                ? 'text-primary bg-primary/10' 
-                : 'text-green-600 bg-green-100'
-            }`}>
-              {question.type === 'multiple_choice' ? 'Multiple Choice' : 'Number Input'}
-            </div>
+            {question.type === 'multiple_choice' && (
+              <div className="text-sm font-medium px-3 py-1 rounded-full inline-block text-primary bg-primary/10">
+                Multiple Choice
+              </div>
+            )}
             <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
             {question.type === 'integer' && (
               <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
@@ -256,6 +401,8 @@ export default function Game({ params }: GameProps) {
               <div className="max-w-xs mx-auto">
                 <Input
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="Your answer"
                   value={integerAnswer}
                   onChange={(e) => setIntegerAnswer(e.target.value)}
@@ -265,7 +412,7 @@ export default function Game({ params }: GameProps) {
                     }
                   }}
                   disabled={hasAnswered || isSubmitting}
-                  className="w-full text-center text-3xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full text-center text-2xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 

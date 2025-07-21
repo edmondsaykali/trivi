@@ -16,6 +16,8 @@ export interface IStorage {
   getPlayersByGameId(gameId: number): Promise<Player[]>;
   getPlayerById(id: number): Promise<Player | undefined>;
   updatePlayerScore(id: number, score: number): Promise<Player | undefined>;
+  removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean>;
+  updatePlayerHeartbeat(sessionId: string): Promise<boolean>;
   
   // Answers
   createAnswer(answer: InsertAnswer): Promise<Answer>;
@@ -116,6 +118,21 @@ export class MemStorage implements IStorage {
     const updatedPlayer = { ...player, score };
     this.players.set(id, updatedPlayer);
     return updatedPlayer;
+  }
+
+  async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
+    for (const [id, player] of Array.from(this.players.entries())) {
+      if (player.gameId === gameId && player.sessionId === sessionId) {
+        this.players.delete(id);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
+    // For in-memory storage, just return true - no persistence needed
+    return true;
   }
 
   // Answers
@@ -251,6 +268,18 @@ export class DatabaseStorage implements IStorage {
   async updatePlayerScore(id: number, score: number): Promise<Player | undefined> {
     const [player] = await this.db.update(players).set({ score }).where(eq(players.id, id)).returning();
     return player;
+  }
+
+  async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
+    const result = await this.db.delete(players)
+      .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
+    return true;
+  }
+
+  async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
+    // For now, just return true as we don't track heartbeats in the database yet
+    // In a production app, you'd have a lastSeen timestamp field
+    return true;
   }
 
   // Answers
