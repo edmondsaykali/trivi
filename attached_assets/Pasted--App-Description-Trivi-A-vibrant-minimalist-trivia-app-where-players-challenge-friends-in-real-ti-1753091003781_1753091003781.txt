@@ -1,0 +1,66 @@
+
+App Description: Trivi
+
+A vibrant, minimalist trivia app where players challenge friends in real-time battles of knowledge. The experience is designed to be fast, resilient, and seamless, especially on mobile devices.
+The landing page provides a simple description of the game and two clear options: "Create Game" and "Join Game" (no silly logos, modern font). Creating a game instantly generates a lobby with a sharable 4-digit code. As other players use this code to join, the lobby updates live for all participants.
+Once the game starts, players are faced with a series of questions in rounds. Each round consists of two questions: one multiple-choice and one integer-based input question.
+
+Core Architecture
+
+The application is built on a fully server-authoritative architecture using Supabase as the backend. The client-side application acts as a "dumb" terminal, responsible only for displaying the game state and sending user inputs to the server. This ensures that all game logic is handled centrally, making the game immune to client-side interruptions like refreshing the page or switching apps.
+* Single Source of Truth: The Supabase Postgres database holds the entire game state. The client has no state of its own.
+* Intelligent Backend: All game logic, including scoring, timers, and round progression, is executed by Supabase Edge Functions.
+* Instant State Syncing: Supabase Realtime is used to push state changes from the server to all clients instantly. This keeps the UI perfectly in sync for all players without the client needing to ask for updates.
+
+Game Overview
+
+* Players: 2
+* Goal: Be the first to win 5 rounds.
+* Time Limit: Each player gets 15 seconds per question. The timer is enforced authoritatively on the server via a question_deadline timestamp in the database.
+
+Round Mechanics
+
+
+Question 1: Multiple-Choice
+
+* Both players receive the same question simultaneously, pushed via Supabase Realtime.
+* Each player selects one of four options within the 15-second server deadline.
+* Resolution
+    * One correct, one wrong: The player with the correct answer wins the round. Their score is incremented in the database.
+    * Both correct or both wrong: The game state is updated to move to Question 2 of the round.
+
+Question 2: Integer Input
+
+When a question requiring a whole number (integer) answer is pushed to both players, the winner is determined by the following rules, processed in order of priority:
+    1. One Correct Answer: If one player submits the exact correct integer and the other does not, the player with the correct answer wins the round.
+    2. Both Answers Correct: If both players submit the exact correct integer, the winner is the player who submitted their answer first, based on the server's timestamp.
+    3. Both Answers Wrong: If neither player submits the correct integer, the winner is decided by proximity:
+        * The absolute difference (distance) between each player's guess and the correct answer is calculated (e.g., if the answer is 50 and a player guesses 45, the difference is 5).
+        * The player whose answer is closer to the correct number wins the round.
+        * Tie-Breaker: If both players' answers are the exact same distance from the correct number (e.g., player A guesses 45 and player B guesses 55 when the answer is 50), the winner is the player who submitted their answer first.
+A player's failure to submit an answer before the deadline is automatically considered a wrong answer and will lose to any player who submitted an answer (correct or incorrect).
+
+
+Winning the Game
+
+* The game continues until a player's score reaches 5. The game-ticker function checks for a winner after each round is processed.
+* When a winner is determined, the game's status in the database is set to finished, and the game_winner_id is recorded.
+* The client receives this final state update and displays a results page, summarizing the final score and round-by-round outcomes.
+
+Lobby & User Handling
+
+* Live Lobby: The lobby component (GameLobby.tsx) subscribes to its specific game row in the database. When a new player joins via the join-game Edge Function, the players array in the database is updated, and Supabase Realtime instantly pushes this change to all clients in the lobby.
+* Player Disconnection: If a player leaves mid-game (by calling the leave-game function), the app will detect the state change and end the game, declaring the remaining player the winner.
+* Username Handling: On the landing page, the player enters a name which is saved to sessionStorage in the browser for auto-filling on their next visit. This name is passed to the create-game or join-game Edge Function and stored in the database for the duration of the game.
+* Avatar System: A random avatar URL is assigned to each player on the server by the create-game and join-game Edge Functions when they are first added to a game.
+
+Time Handling
+
+* Server-Side (The Authority): When a question starts, the start-game function or the game-ticker function records a question_deadline timestamp (current time + 15 seconds) in the database. The submit-answer function validates all incoming answers against this deadline. This is the single source of truth.
+* Client-Side (The Visuals): The frontend receives the question_deadline from the server via the Realtime subscription. It then renders a visual timer bar that counts down to that specific point in time. If a player answers early, their answer is locked, but the visual timer continues for the opponent, accurately reflecting the time remaining according to the server's deadline.
+
+Result Display
+
+* After the game-ticker processes a round, it updates the game state with the last_round_winner_id and sets a flag like waiting_for_answers to true.
+* The client receives this update and displays a short, 3-second result screen showing each player's answer and the correct answer before the game-ticker automatically prepares and pushes the state for the next question or round.
+* The final game-end screen fetches all data for the completed rounds to provide a detailed summary.
