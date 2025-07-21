@@ -122,7 +122,6 @@ export default function Landing() {
         {/* Header */}
         <div className="text-center space-y-4">
           <div>
-            <h1 className="text-6xl sm:text-7xl font-bold" style={{ color: '#FF6B35' }}>Trivi</h1>
             <p className="text-muted-foreground">Challenge friends in real-time trivia battles. Quick rounds, first to 5 wins.</p>
           </div>
         </div>
