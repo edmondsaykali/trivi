@@ -227,17 +227,21 @@ async function processRound(gameId: number, round: number, question: number) {
     }
     
   } else if (questionData?.type === 'integer') {
-    // Question 2: Integer Logic
+    // Question 2: Integer Logic - MUST wait for both players or deadline
     const correctAnswer = questionData.correct;
-    console.log(`Integer question: correct answer is ${correctAnswer}`);
+    console.log(`Integer question: correct answer is ${correctAnswer}, answers received: ${answers.length}`);
     
     if (answers.length === 0) {
       // No answers - no winner
       winnerId = null;
-    } else if (answers.length === 1) {
-      // Only one player answered - they win
+    } else if (answers.length === 1 && timeIsUp) {
+      // Only one player answered and time is up - they win by default
       winnerId = answers[0].playerId;
-      console.log(`Round ${round} winner: Player ${winnerId} (only answer)`);
+      console.log(`Round ${round} winner: Player ${winnerId} (only answer, time up)`);
+    } else if (answers.length === 1 && !timeIsUp) {
+      // Only one player answered but time remains - keep waiting
+      console.log(`Only one answer for Q2, waiting for second player or deadline`);
+      return;
     } else {
       // Both answered - apply integer rules
       const exactCorrect = answers.filter(a => parseInt(a.answer) === correctAnswer);
