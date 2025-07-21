@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, databaseReady } from "./storage";
 import { insertGameSchema, insertPlayerSchema, insertAnswerSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -302,7 +302,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error creating game:", error);
-      res.status(500).json({ message: "Failed to create game" });
+      
+      // Provide specific error messages for database connectivity issues
+      const errorMessage = (error as Error).message || '';
+      if (errorMessage.includes('fetch failed') || errorMessage.includes('ENOTFOUND')) {
+        res.status(503).json({ 
+          message: "Database connection failed. Please check DATABASE_SETUP.md for troubleshooting steps.",
+          details: "Network connectivity issue with Supabase database"
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create game" });
+      }
     }
   });
   

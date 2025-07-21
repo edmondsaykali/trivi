@@ -172,14 +172,31 @@ export class DatabaseStorage implements IStorage {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL environment variable is required");
     }
+    
+    // Initialize with connection pooling and retry logic
     const sql = neon(process.env.DATABASE_URL);
     this.db = drizzle(sql);
   }
 
+  // Helper method for retry logic
+  private async withRetry<T>(operation: () => Promise<T>, retries = 3): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+    throw new Error('Retry failed');
+  }
+
   // Games
   async createGame(insertGame: InsertGame): Promise<Game> {
-    const [game] = await this.db.insert(games).values(insertGame).returning();
-    return game;
+    return this.withRetry(async () => {
+      const [game] = await this.db.insert(games).values(insertGame).returning();
+      return game;
+    });
   }
 
   async getGameByCode(code: string): Promise<Game | undefined> {
@@ -249,96 +266,93 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Smart storage initialization with automatic fallback
-class SmartStorage implements IStorage {
-  private storage: IStorage;
-  private isDatabaseConnected: boolean = false;
+// Initialize database tables
+async function initializeDatabase() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required - this application requires a Supabase database connection");
+  }
 
-  constructor() {
-    this.storage = new MemStorage();
-    console.log("✅ Using reliable in-memory storage for optimal performance");
+  try {
+    const sql = neon(process.env.DATABASE_URL);
     
-    // Optionally try database connection in background
-    if (process.env.DATABASE_URL) {
-      this.tryDatabaseConnection();
-    }
-  }
+    // Create tables if they don't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS games (
+        id SERIAL PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'waiting',
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        creator_id INTEGER NOT NULL,
+        winner_id INTEGER,
+        current_round INTEGER DEFAULT 1,
+        current_question INTEGER DEFAULT 1,
+        question_data JSONB,
+        question_deadline TIMESTAMP,
+        last_round_winner_id INTEGER,
+        waiting_for_answers BOOLEAN DEFAULT false
+      )
+    `;
 
-  private async tryDatabaseConnection() {
-    try {
-      const dbStorage = new DatabaseStorage();
-      // Test connection with a simple query
-      await dbStorage.getGameById(1);
-      this.storage = dbStorage;
-      this.isDatabaseConnected = true;
-      console.log("✅ Successfully connected to Supabase database");
-    } catch (error) {
-      console.log("📡 Database connection not available, continuing with in-memory storage");
-    }
-  }
+    await sql`
+      CREATE TABLE IF NOT EXISTS players (
+        id SERIAL PRIMARY KEY,
+        game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        avatar TEXT NOT NULL,
+        score INTEGER DEFAULT 0,
+        session_id TEXT NOT NULL,
+        joined_at TIMESTAMP DEFAULT NOW() NOT NULL
+      )
+    `;
 
-  // Delegate all methods to the current storage implementation
-  async createGame(game: InsertGame): Promise<Game> {
-    try {
-      return await this.storage.createGame(game);
-    } catch (error) {
-      if (this.isDatabaseConnected) {
-        console.warn("Database error, falling back to in-memory storage");
-        this.storage = new MemStorage();
-        this.isDatabaseConnected = false;
-        return await this.storage.createGame(game);
-      }
-      throw error;
-    }
-  }
+    await sql`
+      CREATE TABLE IF NOT EXISTS answers (
+        id SERIAL PRIMARY KEY,
+        game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        round INTEGER NOT NULL,
+        question INTEGER NOT NULL,
+        answer TEXT NOT NULL,
+        submitted_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        is_correct BOOLEAN
+      )
+    `;
 
-  async getGameByCode(code: string): Promise<Game | undefined> {
-    return await this.storage.getGameByCode(code);
-  }
+    await sql`
+      CREATE TABLE IF NOT EXISTS rounds (
+        id SERIAL PRIMARY KEY,
+        game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        round_number INTEGER NOT NULL,
+        winner_id INTEGER REFERENCES players(id),
+        question1_data JSONB,
+        question2_data JSONB,
+        completed_at TIMESTAMP
+      )
+    `;
 
-  async getGameById(id: number): Promise<Game | undefined> {
-    return await this.storage.getGameById(id);
-  }
-
-  async updateGame(id: number, updates: Partial<Game>): Promise<Game | undefined> {
-    return await this.storage.updateGame(id, updates);
-  }
-
-  async createPlayer(player: InsertPlayer): Promise<Player> {
-    return await this.storage.createPlayer(player);
-  }
-
-  async getPlayersByGameId(gameId: number): Promise<Player[]> {
-    return await this.storage.getPlayersByGameId(gameId);
-  }
-
-  async getPlayerById(id: number): Promise<Player | undefined> {
-    return await this.storage.getPlayerById(id);
-  }
-
-  async updatePlayerScore(id: number, score: number): Promise<Player | undefined> {
-    return await this.storage.updatePlayerScore(id, score);
-  }
-
-  async createAnswer(answer: InsertAnswer): Promise<Answer> {
-    return await this.storage.createAnswer(answer);
-  }
-
-  async getAnswersByGameRound(gameId: number, round: number, question: number): Promise<Answer[]> {
-    return await this.storage.getAnswersByGameRound(gameId, round, question);
-  }
-
-  async createRound(round: InsertRound): Promise<Round> {
-    return await this.storage.createRound(round);
-  }
-
-  async getRoundsByGameId(gameId: number): Promise<Round[]> {
-    return await this.storage.getRoundsByGameId(gameId);
-  }
-
-  async updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined> {
-    return await this.storage.updateRound(id, updates);
+    console.log("✅ Database tables initialized successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Database initialization failed:", (error as Error).message);
+    throw error;
   }
 }
 
-export const storage = new SmartStorage();
+// Database-only storage - Supabase is the single source of truth
+export const storage = new DatabaseStorage();
+
+// Initialize database tables on startup (non-blocking)
+let databaseReady = false;
+
+initializeDatabase().then(() => {
+  console.log("✅ Using Supabase database as single source of truth");
+  databaseReady = true;
+}).catch((error) => {
+  console.error("❌ Database connection failed. Application will continue with database-only mode.");
+  console.error("Please check DATABASE_SETUP.md for troubleshooting steps.");
+  console.error("Error:", (error as Error).message);
+  
+  // Don't exit - let the application start and show error messages to user
+});
+
+export { databaseReady };
