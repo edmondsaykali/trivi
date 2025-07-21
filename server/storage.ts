@@ -1,7 +1,8 @@
 import { games, players, answers, rounds, type Game, type Player, type Answer, type Round, type InsertGame, type InsertPlayer, type InsertAnswer, type InsertRound } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+const { Pool } = pg;
 
 export interface IStorage {
   // Games
@@ -168,14 +169,23 @@ export class MemStorage implements IStorage {
 export class DatabaseStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
+  private pool: InstanceType<typeof Pool>;
+  
   constructor() {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL environment variable is required");
     }
     
-    // Initialize with connection pooling and retry logic
-    const sql = neon(process.env.DATABASE_URL);
-    this.db = drizzle(sql);
+    // Initialize with PostgreSQL connection pool for Supabase compatibility
+    this.pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 10, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+    
+    this.db = drizzle(this.pool);
   }
 
   // Helper method for retry logic
@@ -273,10 +283,15 @@ async function initializeDatabase() {
   }
 
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+    
+    const client = await pool.connect();
     
     // Create tables if they don't exist
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS games (
         id SERIAL PRIMARY KEY,
         code TEXT NOT NULL UNIQUE,
@@ -291,9 +306,9 @@ async function initializeDatabase() {
         last_round_winner_id INTEGER,
         waiting_for_answers BOOLEAN DEFAULT false
       )
-    `;
+    `);
 
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS players (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -303,9 +318,9 @@ async function initializeDatabase() {
         session_id TEXT NOT NULL,
         joined_at TIMESTAMP DEFAULT NOW() NOT NULL
       )
-    `;
+    `);
 
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS answers (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -316,9 +331,9 @@ async function initializeDatabase() {
         submitted_at TIMESTAMP DEFAULT NOW() NOT NULL,
         is_correct BOOLEAN
       )
-    `;
+    `);
 
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS rounds (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -328,7 +343,10 @@ async function initializeDatabase() {
         question2_data JSONB,
         completed_at TIMESTAMP
       )
-    `;
+    `);
+
+    client.release();
+    await pool.end();
 
     console.log("✅ Database tables initialized successfully");
     return true;
