@@ -176,168 +176,157 @@ function generateSessionId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-async function processRound(gameId: number, round: number, question: number) {
+// COMPLETELY REWRITTEN GAME LOGIC - Clean, robust implementation
+async function processGame(gameId: number) {
+  console.log(`=== PROCESSING GAME ${gameId} ===`);
+  
   const game = await storage.getGameById(gameId);
-  if (!game || !game.questionData) return;
-  
-  // If already processing, skip unless deadline has passed
-  if (game.waitingForAnswers) {
-    const timeIsUp = game.questionDeadline && new Date() > new Date(game.questionDeadline);
-    if (!timeIsUp) return;
-    console.log(`Force processing due to expired deadline`);
+  if (!game || !game.questionData || game.status !== 'playing') {
+    console.log(`Skipping processing: invalid game state`);
+    return;
   }
-  
-  // Set processing flag to prevent duplicate calls
+
+  // Prevent concurrent processing
+  if (game.waitingForAnswers) {
+    console.log(`Already processing game ${gameId}`);
+    return;
+  }
+
   await storage.updateGame(gameId, { waitingForAnswers: true });
-  
-  const answers = await storage.getAnswersByGameRound(gameId, round, question);
+
+  const { currentRound, currentQuestion } = game;
+  const answers = await storage.getAnswersByGameRound(gameId, currentRound!, currentQuestion!);
   const players = await storage.getPlayersByGameId(gameId);
   
-  // Check if time is up or both players answered
-  const timeIsUp = game.questionDeadline && new Date() > new Date(game.questionDeadline);
-  const bothAnswered = answers.length === 2;
-  
-  if (!timeIsUp && !bothAnswered) {
-    return; // Wait for either time to expire or both players to answer
+  console.log(`Game ${gameId} R${currentRound}Q${currentQuestion}: ${answers.length}/2 answers received`);
+
+  if (players.length !== 2) {
+    console.error(`Game ${gameId} needs 2 players, has ${players.length}`);
+    return;
   }
-  
-  console.log(`Processing round ${round}, question ${question} with ${answers.length} answers`);
-  
-  let winnerId: number | null = null;
-  const questionData = game.questionData as any;
-  
-  if (questionData?.type === 'multiple_choice') {
-    // Question 1: Multiple Choice Logic
-    const correctIndex = typeof questionData.correct === 'string' ? 
-      questionData.options?.indexOf(questionData.correct) : questionData.correct;
+
+  const timeRemaining = game.questionDeadline ? new Date(game.questionDeadline).getTime() - Date.now() : 0;
+  const timeIsUp = timeRemaining <= 0;
+
+  // Core decision logic
+  let roundWinner: number | null = null;
+  let shouldContinueToQ2 = false;
+  let gameComplete = false;
+
+  if (currentQuestion === 1) {
+    // QUESTION 1: Multiple Choice
+    const result = evaluateMultipleChoice(game.questionData, answers);
+    console.log(`Q1 result: ${result.correctCount} correct answers`);
     
-    const correctAnswers = answers.filter(a => {
-      const answerIndex = parseInt(a.answer);
-      console.log(`MC Check: Player ${a.playerId} submitted ${answerIndex}, correct is ${correctIndex}`);
-      return answerIndex === correctIndex;
-    });
-    
-    console.log(`Multiple choice result: ${correctAnswers.length} correct out of ${answers.length} total`);
-    
-    if (correctAnswers.length === 1) {
-      // One correct, one wrong: Winner determined
-      winnerId = correctAnswers[0].playerId;
-      console.log(`Round ${round} winner: Player ${winnerId} (only correct answer)`);
+    if (result.correctCount === 1) {
+      roundWinner = result.winner!;
+      gameComplete = true;
+      console.log(`Q1 decisive: Player ${roundWinner} wins immediately`);
+    } else if (answers.length === 2 || timeIsUp) {
+      shouldContinueToQ2 = true;
+      console.log(`Q1 tied: Moving to Q2`);
     } else {
-      // Both correct or both wrong: Move to question 2
-      console.log(`No winner yet, moving to question 2`);
-      await storage.updateGame(gameId, {
-        waitingForAnswers: true,
-        lastRoundWinnerId: null
-      });
-      setTimeout(async () => {
-        await startNextQuestion(gameId, round, 2);
-      }, 3000);
-      return;
-    }
-    
-  } else if (questionData?.type === 'integer') {
-    // Question 2: Integer Logic - MUST wait for both players or deadline
-    const correctAnswer = questionData.correct;
-    console.log(`Integer question: correct answer is ${correctAnswer}, answers received: ${answers.length}`);
-    
-    if (answers.length === 0) {
-      // No answers - no winner
-      winnerId = null;
-    } else if (answers.length === 1 && timeIsUp) {
-      // Only one player answered and time is up - they win by default
-      winnerId = answers[0].playerId;
-      console.log(`Round ${round} winner: Player ${winnerId} (only answer, time up)`);
-    } else if (answers.length === 1 && !timeIsUp) {
-      // Only one player answered but time remains - keep waiting
-      console.log(`Only one answer for Q2, waiting for second player or deadline. Time remaining: ${Math.max(0, new Date(game.questionDeadline!).getTime() - Date.now())}ms`);
-      // Reset processing flag so we can check again
+      console.log(`Q1 waiting: ${2 - answers.length} more answers needed`);
       await storage.updateGame(gameId, { waitingForAnswers: false });
       return;
-    } else {
-      // Both answered - apply integer rules
-      const exactCorrect = answers.filter(a => parseInt(a.answer) === correctAnswer);
-      
-      if (exactCorrect.length === 1) {
-        // One correct answer
-        winnerId = exactCorrect[0].playerId;
-        console.log(`Round ${round} winner: Player ${winnerId} (exact answer)`);
-      } else if (exactCorrect.length === 2) {
-        // Both correct - fastest wins
-        winnerId = exactCorrect.sort((a, b) => 
-          new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
-        )[0].playerId;
-        console.log(`Round ${round} winner: Player ${winnerId} (fastest correct)`);
-      } else {
-        // Both wrong - closest wins
-        const withDistance = answers.map(a => ({
-          ...a,
-          distance: Math.abs(parseInt(a.answer) - correctAnswer)
-        }));
-        
-        withDistance.sort((a, b) => {
-          if (a.distance !== b.distance) return a.distance - b.distance;
-          return new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime();
-        });
-        
-        winnerId = withDistance[0].playerId;
-        console.log(`Round ${round} winner: Player ${winnerId} (closest answer, distance: ${withDistance[0].distance})`);
-      }
     }
+  } else if (currentQuestion === 2) {
+    // QUESTION 2: Integer
+    if (answers.length < 2 && !timeIsUp) {
+      console.log(`Q2 waiting: ${2 - answers.length} more answers needed, ${Math.max(0, timeRemaining)}ms remaining`);
+      await storage.updateGame(gameId, { waitingForAnswers: false });
+      return;
+    }
+
+    const result = evaluateIntegerQuestion(game.questionData, answers);
+    roundWinner = result.winner;
+    gameComplete = true;
+    console.log(`Q2 result: Player ${roundWinner || 'none'} wins`);
   }
-  
-  // Update game with round result
-  await storage.updateGame(gameId, {
-    waitingForAnswers: true,
-    lastRoundWinnerId: winnerId
+
+  // Execute decision
+  if (shouldContinueToQ2) {
+    console.log(`Advancing to Q2 in 2 seconds...`);
+    setTimeout(async () => {
+      await startQuestion(gameId, currentRound!, 2);
+    }, 2000);
+  } else if (gameComplete) {
+    await finishGame(gameId, roundWinner);
+  }
+
+  await storage.updateGame(gameId, { 
+    waitingForAnswers: false,
+    lastRoundWinnerId: roundWinner 
   });
+}
+
+function evaluateMultipleChoice(questionData: any, answers: any[]): { correctCount: number, winner: number | null } {
+  const correctIndex = questionData.options?.findIndex((opt: string) => opt === questionData.correct) ?? -1;
+  const correctAnswers = answers.filter(a => parseInt(a.answer) === correctIndex);
+  
+  return {
+    correctCount: correctAnswers.length,
+    winner: correctAnswers.length === 1 ? correctAnswers[0].playerId : null
+  };
+}
+
+function evaluateIntegerQuestion(questionData: any, answers: any[]): { winner: number | null } {
+  if (answers.length === 0) return { winner: null };
+  if (answers.length === 1) return { winner: answers[0].playerId };
+
+  const correctAnswer = questionData.correct;
+  const exactMatches = answers.filter(a => parseInt(a.answer) === correctAnswer);
+
+  if (exactMatches.length === 1) {
+    return { winner: exactMatches[0].playerId };
+  } else if (exactMatches.length === 2) {
+    // Both correct - fastest wins
+    exactMatches.sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
+    return { winner: exactMatches[0].playerId };
+  } else {
+    // Both wrong - closest wins
+    const withDistance = answers.map(a => ({
+      ...a,
+      distance: Math.abs(parseInt(a.answer) - correctAnswer)
+    }));
+    
+    withDistance.sort((a, b) => {
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+    });
+    
+    return { winner: withDistance[0].playerId };
+  }
+}
+
+async function finishGame(gameId: number, winnerId: number | null) {
+  console.log(`Finishing game ${gameId}, winner: ${winnerId || 'none'}`);
   
   if (winnerId) {
-    // Winner gets a point and game ends (1 round only for testing)
     const winner = await storage.getPlayerById(winnerId);
     if (winner) {
       const newScore = (winner.score || 0) + 1;
       await storage.updatePlayerScore(winnerId, newScore);
-      console.log(`Player ${winner.name} wins round ${round}, final score: ${newScore}`);
-      
-      // Game ends after 1 round for testing
-      setTimeout(async () => {
-        await storage.updateGame(gameId, {
-          status: "finished",
-          winnerId: winnerId,
-          lastRoundWinnerId: winnerId,
-          waitingForAnswers: false
-        });
-      }, 5000);
+      console.log(`${winner.name} wins with score: ${newScore}`);
     }
-  } else {
-    // No winner after both questions - game ends in draw
-    console.log(`Round ${round} ends with no winner`);
-    setTimeout(async () => {
-      await storage.updateGame(gameId, {
-        status: "finished",
-        winnerId: null,
-        lastRoundWinnerId: null,
-        waitingForAnswers: false
-      });
-    }, 5000);
   }
+
+  setTimeout(async () => {
+    await storage.updateGame(gameId, {
+      status: "finished",
+      winnerId,
+      waitingForAnswers: false
+    });
+    console.log(`Game ${gameId} officially finished`);
+  }, 3000);
 }
 
-async function startNextQuestion(gameId: number, round: number, question: number) {
-  console.log(`Starting round ${round}, question ${question}`);
+async function startQuestion(gameId: number, round: number, question: number) {
+  console.log(`=== STARTING R${round}Q${question} ===`);
   
-  let questionData;
-  if (question === 1) {
-    questionData = await getRandomQuestion('multiple_choice');
-  } else if (question === 2) {
-    questionData = await getRandomQuestion('integer');
-  } else {
-    console.error(`Invalid question number: ${question}`);
-    return;
-  }
-  
-  const deadline = new Date(Date.now() + 15000); // 15 seconds
+  const questionType = question === 1 ? 'multiple_choice' : 'integer';
+  const questionData = await getRandomQuestion(questionType);
+  const deadline = new Date(Date.now() + 15000);
   
   await storage.updateGame(gameId, {
     status: 'playing',
@@ -348,14 +337,24 @@ async function startNextQuestion(gameId: number, round: number, question: number
     waitingForAnswers: false,
     lastRoundWinnerId: null
   });
-  
-  console.log(`Question ${question} started: ${questionData.text}`);
-  
-  // Auto-process after deadline
+
+  console.log(`Q${question} started: "${questionData.text}"`);
+
+  // Auto-process when time expires
   setTimeout(async () => {
-    console.log(`Time's up for round ${round}, question ${question}`);
-    await processRound(gameId, round, question);
-  }, 15100);
+    console.log(`Time's up for R${round}Q${question}`);
+    await processGame(gameId);
+  }, 15000);
+}
+
+// Legacy function name compatibility
+async function processRound(gameId: number, round: number, question: number) {
+  await processGame(gameId);
+}
+
+// Update the start game function to use new logic
+async function startNextQuestion(gameId: number, round: number, question: number) {
+  await startQuestion(gameId, round, question);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -469,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Need 2 players to start" });
       }
       
-      await startNextQuestion(gameId, 1, 1);
+      await startQuestion(gameId, 1, 1);
       
       res.json({ success: true });
     } catch (error) {
