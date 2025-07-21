@@ -245,10 +245,7 @@ export default function Game({ params }: GameProps) {
       });
       
       setHasAnswered(true);
-      toast({
-        title: "Answer Submitted!",
-        description: "Waiting for your opponent...",
-      });
+      // Show subtle waiting message instead of popup toast
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -453,8 +450,8 @@ export default function Game({ params }: GameProps) {
 
         {/* Answer Status */}
         {hasAnswered && (
-          <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-center">
-            <p className="text-primary font-medium">Answer submitted! Waiting for opponent...</p>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Answer submitted! Waiting for opponent...</p>
           </div>
         )}
 

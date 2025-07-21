@@ -235,7 +235,7 @@ async function processRound(gameId: number, round: number, question: number) {
       return;
     }
   } else if (questionData?.type === 'integer') {
-    const correctAnswer = questionData.correct;
+    const correctAnswer = parseInt(questionData.correct);
     
     if (answers.length === 0) {
       winnerId = null;

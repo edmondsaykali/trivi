@@ -131,7 +131,7 @@ export default function Landing() {
           <Input
             id="username"
             type="text"
-            placeholder="Enter your name (max 10 chars)"
+            placeholder="Enter your name"
             value={username}
             onChange={(e) => {
               if (e.target.value.length <= 10) {

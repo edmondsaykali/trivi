@@ -98,8 +98,8 @@ export default function Lobby({ params }: LobbyProps) {
   const canStart = players.length === 2 && isCreator;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
-      <div className="max-w-md mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-6">
+      <div className="max-w-sm mx-auto space-y-8">
         {/* Header with Back Button */}
         <div className="flex items-center justify-between">
           <Button
@@ -108,55 +108,49 @@ export default function Lobby({ params }: LobbyProps) {
             onClick={() => setLocation('/')}
             className="p-2"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-2xl font-bold text-foreground">Game Lobby</h1>
-          <div className="w-9"></div> {/* Spacer for centering */}
+          <h1 className="text-xl font-semibold text-foreground">Lobby</h1>
+          <div className="w-8"></div>
         </div>
         
         {/* Game Code */}
-        <div className="text-center space-y-2">
-          <div className="bg-card rounded-2xl p-6 shadow-lg border">
-            <p className="text-sm text-muted-foreground mb-2">Game Code</p>
-            <div className="text-4xl font-bold text-primary tracking-widest">{game.code}</div>
-            <p className="text-sm text-muted-foreground mt-2">Share this code with your friend</p>
+        <div className="text-center">
+          <div className="bg-card rounded-xl p-4 border">
+            <p className="text-xs text-muted-foreground mb-1">Game Code</p>
+            <div className="text-3xl font-bold text-primary tracking-wider">{game.code}</div>
           </div>
         </div>
 
         {/* Players List */}
-        <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Players ({players.length}/2)</h2>
-          
+        <div className="bg-card rounded-xl p-4 border">
           <div className="space-y-3">
             {players.map((player) => (
-              <div key={player.id} className="flex items-center space-x-4 p-3 bg-secondary/50 rounded-xl">
+              <div key={player.id} className="flex items-center space-x-3">
                 <PlayerAvatar 
                   src={player.avatar} 
                   alt={`${player.name}'s avatar`}
-                  className="w-12 h-12"
+                  className="w-10 h-10"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {player.name}
                     {player.id === currentPlayer?.id && " (You)"}
                     {player.id === game.creatorId && " (Host)"}
                   </p>
-                  <p className="text-sm text-muted-foreground">Ready to play</p>
                 </div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
             ))}
             
             {players.length < 2 && (
-              <div className="flex items-center space-x-4 p-3 bg-muted rounded-xl border-2 border-dashed border-border">
-                <div className="w-12 h-12 bg-muted-foreground/20 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center space-x-3 opacity-50">
+                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-muted-foreground">Waiting for player...</p>
-                  <p className="text-sm text-muted-foreground">Share the game code above</p>
+                  <p className="text-sm text-muted-foreground">Waiting for player...</p>
                 </div>
               </div>
             )}
@@ -165,20 +159,12 @@ export default function Lobby({ params }: LobbyProps) {
 
         {/* Status */}
         {players.length < 2 ? (
-          <div className="text-center space-y-4">
-            <div className="animate-pulse">
-              <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
-            </div>
-            <p className="text-muted-foreground">Waiting for another player to join...</p>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Waiting for another player...</p>
           </div>
         ) : (
-          <div className="text-center space-y-4">
-            <div className="text-green-600">
-              <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            <p className="text-muted-foreground">All players ready!</p>
+          <div className="text-center">
+            <p className="text-sm text-green-600">Ready to start!</p>
           </div>
         )}
 
@@ -187,15 +173,15 @@ export default function Lobby({ params }: LobbyProps) {
           <Button
             onClick={startGame}
             disabled={isStarting}
-            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all shadow-lg"
+            className="w-full py-3 rounded-xl font-medium"
           >
-            {isStarting ? 'Starting Game...' : 'Start Game'}
+            {isStarting ? 'Starting...' : 'Start Game'}
           </Button>
         )}
         
         {!isCreator && players.length === 2 && (
           <div className="text-center">
-            <p className="text-muted-foreground">Waiting for host to start the game...</p>
+            <p className="text-sm text-muted-foreground">Waiting for host...</p>
           </div>
         )}
       </div>
