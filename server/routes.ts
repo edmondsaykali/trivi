@@ -5,6 +5,8 @@ import { insertGameSchema, insertPlayerSchema, insertAnswerSchema } from "@share
 import { z } from "zod";
 
 // Expanded questions pool for engaging trivia gameplay
+const ROUNDS_TO_WIN = 5; // First to 5 rounds wins
+
 const QUESTIONS_POOL = {
   multipleChoice: [
     {
@@ -195,7 +197,7 @@ async function processGame(gameId: number) {
   await storage.updateGame(gameId, { waitingForAnswers: true });
 
   const { currentRound, currentQuestion } = game;
-  const answers = await storage.getAnswersByGameRound(gameId, currentRound!, currentQuestion!);
+  let answers = await storage.getAnswersByGameRound(gameId, currentRound!, currentQuestion!);
   const players = await storage.getPlayersByGameId(gameId);
   
   console.log(`Game ${gameId} R${currentRound}Q${currentQuestion}: ${answers.length}/2 answers received`);
@@ -208,27 +210,52 @@ async function processGame(gameId: number) {
   const timeRemaining = game.questionDeadline ? new Date(game.questionDeadline).getTime() - Date.now() : 0;
   const timeIsUp = timeRemaining <= 0;
 
+  // Handle timeout - auto-save "no answer" for players who didn't respond
+  if (timeIsUp) {
+    const playerIds = players.map(p => p.id);
+    const answeredPlayerIds = answers.map(a => a.playerId);
+    const noAnswerPlayers = playerIds.filter(id => !answeredPlayerIds.includes(id));
+    
+    // Auto-save "no answer" for players who didn't respond
+    for (const playerId of noAnswerPlayers) {
+      await storage.createAnswer({
+        gameId,
+        playerId,
+        round: currentRound!,
+        question: currentQuestion!,
+        answer: "no_answer"
+      });
+    }
+    
+    // Re-fetch answers including auto-saved ones
+    answers = await storage.getAnswersByGameRound(gameId, currentRound!, currentQuestion!);
+  }
+
   // Core decision logic
   let roundWinner: number | null = null;
   let shouldContinueToQ2 = false;
-  let gameComplete = false;
+  let roundComplete = false;
 
   if (currentQuestion === 1) {
     // QUESTION 1: Multiple Choice
-    const result = evaluateMultipleChoice(game.questionData, answers);
-    console.log(`Q1 result: ${result.correctCount} correct answers`);
-    
-    if (result.correctCount === 1) {
-      roundWinner = result.winner!;
-      gameComplete = true;
-      console.log(`Q1 decisive: Player ${roundWinner} wins immediately`);
-    } else if (answers.length === 2 || timeIsUp) {
-      shouldContinueToQ2 = true;
-      console.log(`Q1 tied: Moving to Q2`);
-    } else {
+    if (answers.length < 2 && !timeIsUp) {
       console.log(`Q1 waiting: ${2 - answers.length} more answers needed`);
       await storage.updateGame(gameId, { waitingForAnswers: false });
       return;
+    }
+    
+    const result = evaluateMultipleChoice(game.questionData, answers, players);
+    console.log(`Q1 result: ${result.correctCount} correct answers`);
+    
+    if (result.correctCount === 1) {
+      // One correct, one wrong: correct player wins round
+      roundWinner = result.winner!;
+      roundComplete = true;
+      console.log(`Q1 decisive: Player ${roundWinner} wins round ${currentRound}`);
+    } else {
+      // Both correct or both wrong: move to question 2
+      shouldContinueToQ2 = true;
+      console.log(`Q1 tied: Moving to Q2`);
     }
   } else if (currentQuestion === 2) {
     // QUESTION 2: Integer
@@ -238,20 +265,24 @@ async function processGame(gameId: number) {
       return;
     }
 
-    const result = evaluateIntegerQuestion(game.questionData, answers);
+    const result = evaluateIntegerQuestion(game.questionData, answers, players);
     roundWinner = result.winner;
-    gameComplete = true;
-    console.log(`Q2 result: Player ${roundWinner || 'none'} wins`);
+    roundComplete = true;
+    console.log(`Q2 result: Player ${roundWinner || 'none'} wins round ${currentRound}`);
   }
 
   // Execute decision
   if (shouldContinueToQ2) {
     console.log(`Advancing to Q2 in 2 seconds...`);
+    await storage.updateGame(gameId, { 
+      waitingForAnswers: false,
+      status: 'question_2'
+    });
     setTimeout(async () => {
       await startQuestion(gameId, currentRound!, 2);
     }, 2000);
-  } else if (gameComplete) {
-    await finishGame(gameId, roundWinner);
+  } else if (roundComplete) {
+    await completeRound(gameId, currentRound!, roundWinner);
   }
 
   await storage.updateGame(gameId, { 
@@ -260,9 +291,20 @@ async function processGame(gameId: number) {
   });
 }
 
-function evaluateMultipleChoice(questionData: any, answers: any[]): { correctCount: number, winner: number | null } {
+function evaluateMultipleChoice(questionData: any, answers: any[], players: any[]): { correctCount: number, winner: number | null } {
   const correctIndex = questionData.options?.findIndex((opt: string) => opt === questionData.correct) ?? -1;
-  const correctAnswers = answers.filter(a => parseInt(a.answer) === correctIndex);
+  
+  // Check each player's answer
+  const playerAnswers = players.map(player => {
+    const answer = answers.find(a => a.playerId === player.id);
+    return {
+      playerId: player.id,
+      answer: answer ? answer.answer : 'no_answer',
+      isCorrect: answer && parseInt(answer.answer) === correctIndex
+    };
+  });
+  
+  const correctAnswers = playerAnswers.filter(pa => pa.isCorrect);
   
   return {
     correctCount: correctAnswers.length,
@@ -270,22 +312,35 @@ function evaluateMultipleChoice(questionData: any, answers: any[]): { correctCou
   };
 }
 
-function evaluateIntegerQuestion(questionData: any, answers: any[]): { winner: number | null } {
-  if (answers.length === 0) return { winner: null };
-  if (answers.length === 1) return { winner: answers[0].playerId };
-
+function evaluateIntegerQuestion(questionData: any, answers: any[], players: any[]): { winner: number | null } {
   const correctAnswer = questionData.correct;
-  const exactMatches = answers.filter(a => parseInt(a.answer) === correctAnswer);
+  
+  // Get answers with proper handling of no_answer
+  const validAnswers = answers.filter(a => a.answer !== 'no_answer');
+  
+  // If only one player answered, they win (any answer beats no answer)
+  if (validAnswers.length === 1) {
+    return { winner: validAnswers[0].playerId };
+  }
+  
+  // If no one answered, no winner
+  if (validAnswers.length === 0) {
+    return { winner: null };
+  }
+
+  // Both answered - apply scoring logic
+  const exactMatches = validAnswers.filter(a => parseInt(a.answer) === correctAnswer);
 
   if (exactMatches.length === 1) {
+    // One exact match: they win
     return { winner: exactMatches[0].playerId };
   } else if (exactMatches.length === 2) {
-    // Both correct - fastest wins
+    // Both correct: faster wins
     exactMatches.sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
     return { winner: exactMatches[0].playerId };
   } else {
-    // Both wrong - closest wins
-    const withDistance = answers.map(a => ({
+    // Both wrong: closer wins, tie on distance = faster wins
+    const withDistance = validAnswers.map(a => ({
       ...a,
       distance: Math.abs(parseInt(a.answer) - correctAnswer)
     }));
@@ -299,26 +354,68 @@ function evaluateIntegerQuestion(questionData: any, answers: any[]): { winner: n
   }
 }
 
-async function finishGame(gameId: number, winnerId: number | null) {
-  console.log(`Finishing game ${gameId}, winner: ${winnerId || 'none'}`);
+async function completeRound(gameId: number, round: number, winnerId: number | null) {
+  console.log(`=== COMPLETING ROUND ${round} ===`);
+  console.log(`Round winner: ${winnerId || 'none'}`);
+  
+  // Store round result
+  await storage.createRound({
+    gameId,
+    roundNumber: round,
+    winnerId,
+    question1Data: null, // Could store question data here if needed
+    question2Data: null
+  });
   
   if (winnerId) {
     const winner = await storage.getPlayerById(winnerId);
     if (winner) {
       const newScore = (winner.score || 0) + 1;
       await storage.updatePlayerScore(winnerId, newScore);
-      console.log(`${winner.name} wins with score: ${newScore}`);
+      console.log(`${winner.name} wins round ${round}, score: ${newScore}`);
+      
+      // Check if winner reached ROUNDS_TO_WIN
+      if (newScore >= ROUNDS_TO_WIN) {
+        console.log(`${winner.name} wins the game with ${newScore} rounds!`);
+        await finishGame(gameId, winnerId);
+        return;
+      }
     }
   }
-
+  
+  // No winner yet, prepare for next round
+  await storage.updateGame(gameId, {
+    status: "waiting",
+    currentRound: round + 1,
+    currentQuestion: 1,
+    questionData: null,
+    questionDeadline: null,
+    lastRoundWinnerId: winnerId,
+    waitingForAnswers: false
+  });
+  
+  // Start next round after a few seconds
   setTimeout(async () => {
-    await storage.updateGame(gameId, {
-      status: "finished",
-      winnerId,
-      waitingForAnswers: false
-    });
-    console.log(`Game ${gameId} officially finished`);
-  }, 3000);
+    console.log(`Starting next round (${round + 1})...`);
+    await startQuestion(gameId, round + 1, 1);
+  }, 5000);
+}
+
+async function finishGame(gameId: number, winnerId: number | null) {
+  console.log(`=== GAME FINISHED ===`);
+  console.log(`Final winner: ${winnerId || 'none'}`);
+  
+  await storage.updateGame(gameId, {
+    status: "finished",
+    winnerId,
+    waitingForAnswers: false
+  });
+  
+  // Get final scores
+  const players = await storage.getPlayersByGameId(gameId);
+  for (const player of players) {
+    console.log(`${player.name}: ${player.score} rounds won`);
+  }
 }
 
 async function startQuestion(gameId: number, round: number, question: number) {
@@ -552,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prevent duplicate processing by checking if we're already processing
       const updatedGame = await storage.getGameById(gameId);
       if (!updatedGame?.waitingForAnswers) {
-        setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
+        setTimeout(() => processGame(gameId), 100);
       }
       
       res.json({ success: true, answer: answerRecord });
@@ -573,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Manual processing trigger for game ${gameId}`);
-      await processRound(gameId, game.currentRound!, game.currentQuestion!);
+      await processGame(gameId);
       
       res.json({ success: true, message: "Processing triggered" });
     } catch (error) {
