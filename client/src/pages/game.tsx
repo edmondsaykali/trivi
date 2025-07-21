@@ -451,7 +451,7 @@ export default function Game({ params }: GameProps) {
         {/* Answer Status */}
         {hasAnswered && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">Answer submitted! Waiting for opponent...</p>
+            <p className="text-sm text-muted-foreground">Waiting for {opponent?.name}...</p>
           </div>
         )}
 

@@ -194,6 +194,7 @@ async function processRound(gameId: number, round: number, question: number) {
     // For multiple choice, the correct answer is the index, not the option text
     const correctAnswers = answers.filter(a => {
       const answerIndex = parseInt(a.answer);
+      console.log(`Checking answer: submitted=${answerIndex}, correct=${questionData.correct}, equal=${answerIndex === questionData.correct}`);
       return answerIndex === questionData.correct;
     });
     
@@ -235,7 +236,7 @@ async function processRound(gameId: number, round: number, question: number) {
       return;
     }
   } else if (questionData?.type === 'integer') {
-    const correctAnswer = parseInt(questionData.correct);
+    const correctAnswer = questionData.correct;
     
     if (answers.length === 0) {
       winnerId = null;
