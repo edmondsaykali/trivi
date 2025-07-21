@@ -99,7 +99,7 @@ export default function Lobby({ params }: LobbyProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-6">
-      <div className="max-w-sm mx-auto space-y-8">
+      <div className="max-w-md mx-auto space-y-6">
         {/* Header with Back Button */}
         <div className="flex items-center justify-between">
           <Button

@@ -163,7 +163,13 @@ async function getRandomQuestion(type: 'multiple_choice' | 'integer') {
   // Fallback to hardcoded questions if database is unavailable
   const typeMapping = { 'multiple_choice': 'multipleChoice', 'integer': 'integer' } as const;
   const pool = QUESTIONS_POOL[typeMapping[type]];
-  return pool[Math.floor(Math.random() * pool.length)];
+  const fallbackQuestion = pool[Math.floor(Math.random() * pool.length)];
+  
+  // Ensure the type field is properly set for fallback questions
+  return {
+    ...fallbackQuestion,
+    type
+  };
 }
 
 function generateSessionId(): string {
@@ -191,14 +197,19 @@ async function processRound(gameId: number, round: number, question: number) {
   const questionData = game.questionData as any;
   
   if (questionData?.type === 'multiple_choice') {
-    // For multiple choice, the correct answer is the index, not the option text
+    // For multiple choice, the correct answer should be an index
+    const correctIndex = typeof questionData.correct === 'string' ? 
+      questionData.options?.indexOf(questionData.correct) : questionData.correct;
+    
     const correctAnswers = answers.filter(a => {
       const answerIndex = parseInt(a.answer);
-      console.log(`Checking answer: submitted=${answerIndex}, correct=${questionData.correct}, equal=${answerIndex === questionData.correct}`);
-      return answerIndex === questionData.correct;
+      console.log(`Checking answer: submitted=${answerIndex}, correct=${correctIndex}, equal=${answerIndex === correctIndex}`);
+      return answerIndex === correctIndex;
     });
     
     console.log(`Multiple choice: ${correctAnswers.length} correct answers out of ${answers.length} total`);
+  console.log(`Question data:`, questionData);
+  console.log(`All answers:`, answers.map(a => ({ playerId: a.playerId, answer: a.answer, submitted: a.submittedAt })));
     
     if (correctAnswers.length === 1) {
       // Only one player got it right - they win the round immediately
@@ -530,6 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Always trigger processing to check if we should proceed
+      console.log(`Answer submitted: ${answer} for round ${game.currentRound}, question ${game.currentQuestion}`);
       setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
       
       res.json({ success: true, answer: answerRecord });

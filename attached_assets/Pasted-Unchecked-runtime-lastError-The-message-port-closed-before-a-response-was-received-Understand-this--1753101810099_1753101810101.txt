@@ -1,0 +1,22 @@
+Unchecked runtime.lastError: The message port closed before a response was received.Understand this error
+Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache, so the message channel is closed.Understand this error
+199Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.Understand this error
+Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache, so the message channel is closed.Understand this error
+Error in event handler: ReferenceError: strURL is not defined
+    at chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/background.js:1:61314Understand this error
+Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache, so the message channel is closed.Understand this error
+Error in event handler: ReferenceError: strURL is not defined
+    at chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/background.js:1:61314Understand this error
+Error in event handler: ReferenceError: strURL is not defined
+    at chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/background.js:1:61314Understand this error
+Error in event handler: ReferenceError: strURL is not defined
+    at chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/background.js:1:61314Understand this error
+completion_list.html:12  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/utils.js net::ERR_FILE_NOT_FOUNDUnderstand this error
+chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/utils.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+completion_list.html:13  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/extensionState.js net::ERR_FILE_NOT_FOUNDUnderstand this error
+chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/extensionState.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+completion_list.html:14  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/heuristicsRedefinitions.js net::ERR_FILE_NOT_FOUNDUnderstand this error
+chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/heuristicsRedefinitions.js:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+completion_list.html:12  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/utils.js net::ERR_FILE_NOT_FOUNDUnderstand this error
+completion_list.html:13  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/extensionState.js net::ERR_FILE_NOT_FOUNDUnderstand this error
+completion_list.html:14  GET chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/heuristicsRedefinitions.js net::ERR_FILE_NOT_FOUNDUnderstand this error
