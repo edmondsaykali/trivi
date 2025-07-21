@@ -240,7 +240,7 @@ async function processRound(gameId: number, round: number, question: number) {
       console.log(`Round ${round} winner: Player ${winnerId} (only answer, time up)`);
     } else if (answers.length === 1 && !timeIsUp) {
       // Only one player answered but time remains - keep waiting
-      console.log(`Only one answer for Q2, waiting for second player or deadline`);
+      console.log(`Only one answer for Q2, waiting for second player or deadline. Time remaining: ${Math.max(0, new Date(game.questionDeadline!).getTime() - Date.now())}ms`);
       return;
     } else {
       // Both answered - apply integer rules

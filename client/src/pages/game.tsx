@@ -211,7 +211,10 @@ export default function Game({ params }: GameProps) {
 
   useEffect(() => {
     if (gameState?.game.status === 'finished') {
-      setLocation(`/results/${gameId}`);
+      // Add small delay to prevent loading screen stuck
+      setTimeout(() => {
+        setLocation(`/results/${gameId}`);
+      }, 100);
     }
   }, [gameState?.game.status, gameId, setLocation]);
 

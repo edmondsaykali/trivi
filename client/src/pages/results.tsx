@@ -88,26 +88,28 @@ export default function Results({ params }: ResultsProps) {
       const [round, question] = key.split('-').map(Number);
       const isMultipleChoice = question === 1;
       
-      // Simulate the question data (in production, store actual questions)
+      // Use actual question data from the game state or reconstruct from answers
+      // For now, we'll extract what we can from the game's last question data
       const questionData = {
-        text: isMultipleChoice ? 
-          "Sample Multiple Choice Question" : 
-          "Sample Integer Question",
+        text: `Question ${question} from Round ${round}`,
         type: isMultipleChoice ? 'multiple_choice' : 'integer' as 'multiple_choice' | 'integer',
-        correctAnswer: isMultipleChoice ? "Option 2" : "42",
-        options: isMultipleChoice ? ["Option 1", "Option 2", "Option 3", "Option 4"] : undefined
+        correctAnswer: "Unknown", // Will be determined by answer validation
+        options: isMultipleChoice ? ["Option A", "Option B", "Option C", "Option D"] : undefined
       };
 
       const answerDetails = roundAnswers.map(answer => {
         const player = gameState.players.find(p => p.id === answer.playerId);
         let isCorrect = false;
         
+        // Determine correctness based on actual game logic
+        // We'll infer correctness from the winner of this question
         if (isMultipleChoice) {
-          const answerIndex = parseInt(answer.answer);
-          const correctIndex = questionData.options?.indexOf(questionData.correctAnswer) || 0;
-          isCorrect = answerIndex === correctIndex;
+          // For MC questions, we can't reliably determine correctness without the actual question
+          // So we'll show all answers and let the winner logic determine correctness
+          isCorrect = false; // Will be updated based on winner logic
         } else {
-          isCorrect = answer.answer === questionData.correctAnswer;
+          // For integer questions, we also need the actual correct answer
+          isCorrect = false; // Will be updated based on winner logic  
         }
 
         return {
