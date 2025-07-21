@@ -186,6 +186,12 @@ export default function Game({ params }: GameProps) {
   if (gameState.game.status === 'showing_results' && currentPlayer && opponent) {
     return <QuestionResultsModal gameState={gameState} currentPlayer={currentPlayer} opponent={opponent} />;
   }
+  
+  // Redirect to final results page when game is finished
+  if (gameState.game.status === 'finished') {
+    setLocation(`/results/${gameId}`);
+    return null;
+  }
 
   const { game } = gameState;
   const question = game.questionData as Question;

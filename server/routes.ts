@@ -274,6 +274,10 @@ async function processGame(gameId: number) {
   // Execute decision
   if (shouldContinueToQ2) {
     console.log(`Q1 results - showing for 3 seconds before Q2...`);
+    
+    // Pre-load next question data
+    const nextQuestionData = await getRandomQuestion('integer');
+    
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
       status: 'showing_results',
@@ -282,7 +286,23 @@ async function processGame(gameId: number) {
     
     // Show results for 3 seconds, then move to Q2
     setTimeout(async () => {
-      await startQuestion(gameId, currentRound!, 2);
+      // Start Q2 with pre-loaded data
+      const deadline = new Date(Date.now() + 15000);
+      await storage.updateGame(gameId, {
+        status: 'playing',
+        currentRound: currentRound!,
+        currentQuestion: 2,
+        questionData: nextQuestionData,
+        questionDeadline: deadline,
+        waitingForAnswers: false,
+        lastRoundWinnerId: null
+      });
+      
+      // Auto-process when time expires
+      setTimeout(async () => {
+        console.log(`Time's up for R${currentRound}Q2`);
+        await processGame(gameId);
+      }, 15000);
     }, 3000);
   } else if (roundComplete) {
     // Show results before completing round
@@ -391,28 +411,43 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
       // Check if winner reached ROUNDS_TO_WIN
       if (newScore >= ROUNDS_TO_WIN) {
         console.log(`${winner.name} wins the game with ${newScore} rounds!`);
-        await finishGame(gameId, winnerId);
+        
+        // Show final results for 3 seconds before finishing
+        await storage.updateGame(gameId, { 
+          waitingForAnswers: false,
+          status: 'showing_results',
+          lastRoundWinnerId: winnerId
+        });
+        
+        setTimeout(async () => {
+          await finishGame(gameId, winnerId);
+        }, 3000);
         return;
       }
     }
   }
   
-  // No winner yet, prepare for next round
+  // No winner yet, prepare and pre-load next round
+  const nextQuestionData = await getRandomQuestion('multiple_choice');
+  
+  // Start next round immediately after current results display ends
+  console.log(`Starting next round (${round + 1})...`);
+  const deadline = new Date(Date.now() + 15000);
   await storage.updateGame(gameId, {
-    status: "waiting",
+    status: 'playing',
     currentRound: round + 1,
     currentQuestion: 1,
-    questionData: null,
-    questionDeadline: null,
+    questionData: nextQuestionData,
+    questionDeadline: deadline,
     lastRoundWinnerId: winnerId,
     waitingForAnswers: false
   });
   
-  // Start next round after a few seconds
+  // Auto-process when time expires
   setTimeout(async () => {
-    console.log(`Starting next round (${round + 1})...`);
-    await startQuestion(gameId, round + 1, 1);
-  }, 5000);
+    console.log(`Time's up for R${round + 1}Q1`);
+    await processGame(gameId);
+  }, 15000);
 }
 
 async function finishGame(gameId: number, winnerId: number | null) {
@@ -595,10 +630,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const { round, question } = req.query;
       
+      // If no round/question specified, return all answers for the game
       if (!round || !question) {
-        return res.status(400).json({ message: "Round and question parameters required" });
+        // Get all rounds
+        const rounds = await storage.getRoundsByGameId(gameId);
+        const allAnswers = [];
+        
+        // Get answers for each round
+        for (const r of rounds) {
+          // Get answers for Q1
+          const q1Answers = await storage.getAnswersByGameRound(gameId, r.roundNumber, 1);
+          allAnswers.push(...q1Answers);
+          
+          // Get answers for Q2 if it was played
+          const q2Answers = await storage.getAnswersByGameRound(gameId, r.roundNumber, 2);
+          if (q2Answers.length > 0) {
+            allAnswers.push(...q2Answers);
+          }
+        }
+        
+        // Also check current round in case game finished mid-round
+        const game = await storage.getGameById(gameId);
+        if (game && game.currentRound) {
+          const currentRoundAnswers = await storage.getAnswersByGameRound(gameId, game.currentRound, 1);
+          const currentQ2Answers = await storage.getAnswersByGameRound(gameId, game.currentRound, 2);
+          
+          // Add if not already included
+          currentRoundAnswers.forEach(ans => {
+            if (!allAnswers.find(a => a.id === ans.id)) {
+              allAnswers.push(ans);
+            }
+          });
+          currentQ2Answers.forEach(ans => {
+            if (!allAnswers.find(a => a.id === ans.id)) {
+              allAnswers.push(ans);
+            }
+          });
+        }
+        
+        return res.json(allAnswers);
       }
       
+      // Otherwise return specific round/question answers
       const answers = await storage.getAnswersByGameRound(
         gameId, 
         parseInt(round as string), 
