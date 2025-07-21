@@ -191,7 +191,11 @@ async function processRound(gameId: number, round: number, question: number) {
   const questionData = game.questionData as any;
   
   if (questionData?.type === 'multiple_choice') {
-    const correctAnswers = answers.filter(a => parseInt(a.answer) === questionData.correct);
+    // For multiple choice, the correct answer is the index, not the option text
+    const correctAnswers = answers.filter(a => {
+      const answerIndex = parseInt(a.answer);
+      return answerIndex === questionData.correct;
+    });
     
     if (correctAnswers.length === 1) {
       winnerId = correctAnswers[0].playerId;

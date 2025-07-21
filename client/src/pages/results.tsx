@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { PlayerAvatar } from '@/components/ui/player-avatar';
 import { useGameState } from '@/hooks/use-game-state';
+import { Home } from 'lucide-react';
 
 interface ResultsProps {
   params: { id: string };
@@ -22,6 +23,11 @@ export default function Results({ params }: ResultsProps) {
       setLocation(`/game/${gameId}`);
     }
   }, [gameState?.game.status, gameId, setLocation]);
+
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const returnToLanding = () => {
     // Clear session data

@@ -7,7 +7,7 @@ import { PlayerAvatar } from '@/components/ui/player-avatar';
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { ArrowLeft, Check, X, Clock } from 'lucide-react';
+import { Home, Check, X, Clock } from 'lucide-react';
 import type { Question } from '@/types/game';
 import type { GameState, Player } from '@/types/game';
 
@@ -215,14 +215,20 @@ export default function Game({ params }: GameProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
+  // Scroll to top on component mount  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     // Reset answer state when question changes
     if (gameState?.game.questionData) {
-      const currentQuestionId = `${gameState.game.currentRound}-${gameState.game.currentQuestion}`;
+      const currentQuestionId = `${gameState.game.currentRound}-${gameState.game.currentQuestion}-${JSON.stringify(gameState.game.questionData)}`;
       if (lastQuestionId !== currentQuestionId) {
         setSelectedAnswer(null);
         setIntegerAnswer('');
         setHasAnswered(false);
+        setIsSubmitting(false);
         setLastQuestionId(currentQuestionId);
       }
     }
@@ -346,7 +352,7 @@ export default function Game({ params }: GameProps) {
               onClick={() => setLocation('/')}
               className="p-2"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <Home className="w-4 h-4" />
             </Button>
             <div className="text-sm font-medium text-muted-foreground">
               Round {game.currentRound} of 5 - Question {game.currentQuestion}
@@ -392,7 +398,7 @@ export default function Game({ params }: GameProps) {
                   onClick={() => handleMultipleChoice(index)}
                   disabled={hasAnswered || isSubmitting}
                   className={`w-full text-left p-4 border-2 rounded-xl transition-all group ${
-                    selectedAnswer === index
+                    selectedAnswer === index && hasAnswered
                       ? 'border-primary bg-primary/5'
                       : hasAnswered
                       ? 'border-slate-200 bg-slate-50 cursor-not-allowed'
