@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
+import { Play, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -110,23 +110,41 @@ export default function Landing() {
     }
   };
 
+  const isNameValid = username.trim().length > 0 && username.trim().length <= 10;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary/10 to-secondary/20">
       <div className="w-full max-w-md space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto border-4 border-primary/20">
+            <span className="text-3xl font-bold text-primary">T</span>
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-foreground">Trivia, on the go</h1>
+            <p className="text-muted-foreground">Challenge friends in real-time trivia battles. Quick rounds, first to 5 wins.</p>
+          </div>
+        </div>
+
         {/* Username Input */}
         <div className="space-y-2">
           <Input
             id="username"
             type="text"
-            placeholder="Enter your name"
+            placeholder="Enter your name (max 10 chars)"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= 10) {
+                setUsername(e.target.value);
+              }
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && isNameValid) {
                 createGame();
               }
             }}
             className="w-full px-4 py-3 rounded-xl text-lg"
+            maxLength={10}
           />
         </div>
 
@@ -134,18 +152,20 @@ export default function Landing() {
         <div className="space-y-4">
           <Button
             onClick={createGame}
-            disabled={isCreating}
-            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg"
+            disabled={isCreating || !isNameValid}
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCreating ? 'Creating...' : 'Create Game'}
+            <Play className="w-5 h-5" />
+            {isCreating ? 'Creating...' : 'Start Game'}
           </Button>
           
           <Button
             onClick={() => setShowJoinSection(!showJoinSection)}
             variant="outline"
-            disabled={isJoining}
-            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all"
+            disabled={isJoining || !isNameValid}
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <UserPlus className="w-5 h-5" />
             Join Game
           </Button>
         </div>

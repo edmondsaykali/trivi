@@ -201,6 +201,7 @@ export default function Game({ params }: GameProps) {
   const [integerAnswer, setIntegerAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAnswered, setHasAnswered] = useState(false);
+  const [lastQuestionId, setLastQuestionId] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -217,11 +218,15 @@ export default function Game({ params }: GameProps) {
   useEffect(() => {
     // Reset answer state when question changes
     if (gameState?.game.questionData) {
-      setSelectedAnswer(null);
-      setIntegerAnswer('');
-      setHasAnswered(false);
+      const currentQuestionId = `${gameState.game.currentRound}-${gameState.game.currentQuestion}`;
+      if (lastQuestionId !== currentQuestionId) {
+        setSelectedAnswer(null);
+        setIntegerAnswer('');
+        setHasAnswered(false);
+        setLastQuestionId(currentQuestionId);
+      }
     }
-  }, [gameState?.game.currentRound, gameState?.game.currentQuestion]);
+  }, [gameState?.game.currentRound, gameState?.game.currentQuestion, gameState?.game.questionData, lastQuestionId]);
 
   const submitAnswer = async (answer: string | number) => {
     if (hasAnswered || isSubmitting) return;
