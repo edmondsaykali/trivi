@@ -273,16 +273,30 @@ async function processGame(gameId: number) {
 
   // Execute decision
   if (shouldContinueToQ2) {
-    console.log(`Advancing to Q2 in 2 seconds...`);
+    console.log(`Q1 results - showing for 3 seconds before Q2...`);
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
-      status: 'question_2'
+      status: 'showing_results',
+      lastRoundWinnerId: null // No round winner yet
     });
+    
+    // Show results for 3 seconds, then move to Q2
     setTimeout(async () => {
       await startQuestion(gameId, currentRound!, 2);
-    }, 2000);
+    }, 3000);
   } else if (roundComplete) {
-    await completeRound(gameId, currentRound!, roundWinner);
+    // Show results before completing round
+    console.log(`Round ${currentRound} complete - showing results for 3 seconds...`);
+    await storage.updateGame(gameId, { 
+      waitingForAnswers: false,
+      status: 'showing_results',
+      lastRoundWinnerId: roundWinner
+    });
+    
+    // Show results for 3 seconds, then complete round
+    setTimeout(async () => {
+      await completeRound(gameId, currentRound!, roundWinner);
+    }, 3000);
   }
 
   await storage.updateGame(gameId, { 
@@ -421,6 +435,7 @@ async function finishGame(gameId: number, winnerId: number | null) {
 async function startQuestion(gameId: number, round: number, question: number) {
   console.log(`=== STARTING R${round}Q${question} ===`);
   
+  // Get random question for now until we have the database column
   const questionType = question === 1 ? 'multiple_choice' : 'integer';
   const questionData = await getRandomQuestion(questionType);
   const deadline = new Date(Date.now() + 15000);

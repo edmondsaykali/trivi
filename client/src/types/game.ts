@@ -18,7 +18,7 @@ export interface Player {
 export interface Game {
   id: number;
   code: string;
-  status: 'waiting' | 'playing' | 'finished';
+  status: 'waiting' | 'playing' | 'showing_results' | 'finished';
   createdAt: string;
   creatorId: number;
   winnerId?: number;
@@ -28,6 +28,7 @@ export interface Game {
   questionDeadline?: string;
   lastRoundWinnerId?: number;
   waitingForAnswers: boolean;
+  allRoundQuestions?: any;
 }
 
 export interface GameState {

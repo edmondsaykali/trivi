@@ -5,7 +5,7 @@ import { z } from "zod";
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
-  status: text("status").notNull().default("waiting"), // waiting, playing, finished
+  status: text("status").notNull().default("waiting"), // waiting, playing, showing_results, finished
   createdAt: timestamp("created_at").defaultNow().notNull(),
   creatorId: integer("creator_id").notNull(),
   winnerId: integer("winner_id"),

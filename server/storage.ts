@@ -22,6 +22,7 @@ export interface IStorage {
   // Answers
   createAnswer(answer: InsertAnswer): Promise<Answer>;
   getAnswersByGameRound(gameId: number, round: number, question: number): Promise<Answer[]>;
+  getAnswersForQuestion(gameId: number, round: number, question: number): Promise<Answer[]>;
   
   // Rounds
   createRound(round: InsertRound): Promise<Round>;
@@ -65,6 +66,7 @@ export class MemStorage implements IStorage {
       currentRound: insertGame.currentRound || null,
       currentQuestion: insertGame.currentQuestion || null,
       questionData: insertGame.questionData || null,
+      allRoundQuestions: insertGame.allRoundQuestions || null,
       questionDeadline: insertGame.questionDeadline || null,
       lastRoundWinnerId: insertGame.lastRoundWinnerId || null,
       waitingForAnswers: insertGame.waitingForAnswers || null,
@@ -156,6 +158,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.answers.values()).filter(
       answer => answer.gameId === gameId && answer.round === round && answer.question === question
     );
+  }
+  
+  async getAnswersForQuestion(gameId: number, round: number, question: number): Promise<Answer[]> {
+    return this.getAnswersByGameRound(gameId, round, question);
   }
 
   // Rounds
@@ -300,6 +306,10 @@ export class DatabaseStorage implements IStorage {
         eq(answers.question, question)
       )
     );
+  }
+  
+  async getAnswersForQuestion(gameId: number, round: number, question: number): Promise<Answer[]> {
+    return this.getAnswersByGameRound(gameId, round, question);
   }
 
   // Rounds
