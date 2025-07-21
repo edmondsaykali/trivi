@@ -117,9 +117,6 @@ export default function Landing() {
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto border-4 border-primary/20">
-            <span className="text-3xl font-bold text-primary">T</span>
-          </div>
           <div>
             <h1 className="text-4xl font-bold text-foreground">Trivia, on the go</h1>
             <p className="text-muted-foreground">Challenge friends in real-time trivia battles. Quick rounds, first to 5 wins.</p>
