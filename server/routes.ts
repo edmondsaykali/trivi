@@ -178,7 +178,10 @@ function generateSessionId(): string {
 
 async function processRound(gameId: number, round: number, question: number) {
   const game = await storage.getGameById(gameId);
-  if (!game || !game.questionData) return;
+  if (!game || !game.questionData || game.waitingForAnswers) return;
+  
+  // Set processing flag to prevent duplicate calls
+  await storage.updateGame(gameId, { waitingForAnswers: true });
   
   const answers = await storage.getAnswersByGameRound(gameId, round, question);
   const players = await storage.getPlayersByGameId(gameId);
@@ -241,6 +244,8 @@ async function processRound(gameId: number, round: number, question: number) {
     } else if (answers.length === 1 && !timeIsUp) {
       // Only one player answered but time remains - keep waiting
       console.log(`Only one answer for Q2, waiting for second player or deadline. Time remaining: ${Math.max(0, new Date(game.questionDeadline!).getTime() - Date.now())}ms`);
+      // Reset processing flag so we can check again
+      await storage.updateGame(gameId, { waitingForAnswers: false });
       return;
     } else {
       // Both answered - apply integer rules
@@ -294,7 +299,7 @@ async function processRound(gameId: number, round: number, question: number) {
           status: "finished",
           winnerId: winnerId,
           lastRoundWinnerId: winnerId,
-          waitingForAnswers: true
+          waitingForAnswers: false
         });
       }, 5000);
     }
@@ -306,7 +311,7 @@ async function processRound(gameId: number, round: number, question: number) {
         status: "finished",
         winnerId: null,
         lastRoundWinnerId: null,
-        waitingForAnswers: true
+        waitingForAnswers: false
       });
     }, 5000);
   }
@@ -538,7 +543,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Always trigger processing to check if we should proceed
       console.log(`Answer submitted: ${answer} for round ${game.currentRound}, question ${game.currentQuestion}`);
-      setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
+      // Prevent duplicate processing by checking if we're already processing
+      const updatedGame = await storage.getGameById(gameId);
+      if (!updatedGame?.waitingForAnswers) {
+        setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
+      }
       
       res.json({ success: true, answer: answerRecord });
     } catch (error) {
