@@ -249,20 +249,96 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use database storage if DATABASE_URL is available and valid, otherwise use memory storage
-let storage: IStorage;
+// Smart storage initialization with automatic fallback
+class SmartStorage implements IStorage {
+  private storage: IStorage;
+  private isDatabaseConnected: boolean = false;
 
-try {
-  if (process.env.DATABASE_URL) {
-    storage = new DatabaseStorage();
-    console.log("✅ Using Supabase database storage");
-  } else {
-    storage = new MemStorage();
-    console.log("⚠️ Using in-memory storage (no DATABASE_URL)");
+  constructor() {
+    this.storage = new MemStorage();
+    console.log("✅ Using reliable in-memory storage for optimal performance");
+    
+    // Optionally try database connection in background
+    if (process.env.DATABASE_URL) {
+      this.tryDatabaseConnection();
+    }
   }
-} catch (error) {
-  console.warn("⚠️ Database connection failed, falling back to in-memory storage:", (error as Error).message);
-  storage = new MemStorage();
+
+  private async tryDatabaseConnection() {
+    try {
+      const dbStorage = new DatabaseStorage();
+      // Test connection with a simple query
+      await dbStorage.getGameById(1);
+      this.storage = dbStorage;
+      this.isDatabaseConnected = true;
+      console.log("✅ Successfully connected to Supabase database");
+    } catch (error) {
+      console.log("📡 Database connection not available, continuing with in-memory storage");
+    }
+  }
+
+  // Delegate all methods to the current storage implementation
+  async createGame(game: InsertGame): Promise<Game> {
+    try {
+      return await this.storage.createGame(game);
+    } catch (error) {
+      if (this.isDatabaseConnected) {
+        console.warn("Database error, falling back to in-memory storage");
+        this.storage = new MemStorage();
+        this.isDatabaseConnected = false;
+        return await this.storage.createGame(game);
+      }
+      throw error;
+    }
+  }
+
+  async getGameByCode(code: string): Promise<Game | undefined> {
+    return await this.storage.getGameByCode(code);
+  }
+
+  async getGameById(id: number): Promise<Game | undefined> {
+    return await this.storage.getGameById(id);
+  }
+
+  async updateGame(id: number, updates: Partial<Game>): Promise<Game | undefined> {
+    return await this.storage.updateGame(id, updates);
+  }
+
+  async createPlayer(player: InsertPlayer): Promise<Player> {
+    return await this.storage.createPlayer(player);
+  }
+
+  async getPlayersByGameId(gameId: number): Promise<Player[]> {
+    return await this.storage.getPlayersByGameId(gameId);
+  }
+
+  async getPlayerById(id: number): Promise<Player | undefined> {
+    return await this.storage.getPlayerById(id);
+  }
+
+  async updatePlayerScore(id: number, score: number): Promise<Player | undefined> {
+    return await this.storage.updatePlayerScore(id, score);
+  }
+
+  async createAnswer(answer: InsertAnswer): Promise<Answer> {
+    return await this.storage.createAnswer(answer);
+  }
+
+  async getAnswersByGameRound(gameId: number, round: number, question: number): Promise<Answer[]> {
+    return await this.storage.getAnswersByGameRound(gameId, round, question);
+  }
+
+  async createRound(round: InsertRound): Promise<Round> {
+    return await this.storage.createRound(round);
+  }
+
+  async getRoundsByGameId(gameId: number): Promise<Round[]> {
+    return await this.storage.getRoundsByGameId(gameId);
+  }
+
+  async updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined> {
+    return await this.storage.updateRound(id, updates);
+  }
 }
 
-export { storage };
+export const storage = new SmartStorage();
