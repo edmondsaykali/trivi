@@ -178,7 +178,14 @@ function generateSessionId(): string {
 
 async function processRound(gameId: number, round: number, question: number) {
   const game = await storage.getGameById(gameId);
-  if (!game || !game.questionData || game.waitingForAnswers) return;
+  if (!game || !game.questionData) return;
+  
+  // If already processing, skip unless deadline has passed
+  if (game.waitingForAnswers) {
+    const timeIsUp = game.questionDeadline && new Date() > new Date(game.questionDeadline);
+    if (!timeIsUp) return;
+    console.log(`Force processing due to expired deadline`);
+  }
   
   // Set processing flag to prevent duplicate calls
   await storage.updateGame(gameId, { waitingForAnswers: true });
@@ -556,6 +563,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Debug: Manually trigger processing for stuck games
+  app.post("/api/games/:id/process", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const game = await storage.getGameById(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      console.log(`Manual processing trigger for game ${gameId}`);
+      await processRound(gameId, game.currentRound!, game.currentQuestion!);
+      
+      res.json({ success: true, message: "Processing triggered" });
+    } catch (error) {
+      console.error("Error triggering processing:", error);
+      res.status(500).json({ message: "Failed to trigger processing" });
+    }
+  });
+
   // Leave game (for disconnection handling)
   app.post("/api/games/:id/leave", async (req, res) => {
     try {
