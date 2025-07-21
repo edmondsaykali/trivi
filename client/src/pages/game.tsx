@@ -196,7 +196,7 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
 
 export default function Game({ params }: GameProps) {
   const gameId = parseInt(params.id);
-  const { gameState, loading } = useGameState(gameId);
+  const { gameState, loading, error } = useGameState(gameId);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [integerAnswer, setIntegerAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -273,26 +273,46 @@ export default function Game({ params }: GameProps) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-pulse">
-            <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
-          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading game...</p>
         </div>
       </div>
     );
   }
 
-  if (!gameState || !currentPlayer || !opponent) {
+  if (error || !gameState) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Game not found</p>
-          <Button onClick={() => setLocation('/')} className="mt-4">
+        <div className="text-center space-y-4">
+          <div className="text-red-500 text-xl">⚠️</div>
+          <h2 className="text-xl font-semibold text-foreground">Game Not Found</h2>
+          <p className="text-muted-foreground">{error || "This game doesn't exist or has ended."}</p>
+          <Button onClick={() => setLocation('/')} variant="outline">
             Back to Home
           </Button>
         </div>
       </div>
     );
+  }
+
+  if (!sessionId || !currentPlayer) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-yellow-500 text-xl">🔒</div>
+          <h2 className="text-xl font-semibold text-foreground">Access Denied</h2>
+          <p className="text-muted-foreground">You don't have access to this game.</p>
+          <Button onClick={() => setLocation('/')} variant="outline">
+            Back to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show results modal when waiting for answers
+  if (gameState.game.waitingForAnswers && currentPlayer && opponent) {
+    return <QuestionResultsModal gameState={gameState} currentPlayer={currentPlayer} opponent={opponent} />;
   }
 
   const { game } = gameState;
@@ -302,18 +322,11 @@ export default function Game({ params }: GameProps) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-pulse">
-            <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
-          </div>
-          <p className="text-muted-foreground">Preparing question...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Waiting for question...</p>
         </div>
       </div>
     );
-  }
-
-  // Show result modal if waiting for answers to be processed
-  if (game.waitingForAnswers) {
-    return <QuestionResultsModal gameState={gameState} currentPlayer={currentPlayer} opponent={opponent} />;
   }
 
   return (
@@ -342,8 +355,8 @@ export default function Game({ params }: GameProps) {
               </div>
               <div className="text-muted-foreground">vs</div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-500">{opponent.score}</div>
-                <div className="text-xs text-muted-foreground">{opponent.name}</div>
+                <div className="text-2xl font-bold text-yellow-500">{opponent?.score || 0}</div>
+                <div className="text-xs text-muted-foreground">{opponent?.name || 'Opponent'}</div>
               </div>
             </div>
           </div>

@@ -154,9 +154,8 @@ export default function Landing() {
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
           showJoinSection ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-4 mt-4">
+          <div className="bg-card rounded-2xl p-6 shadow-lg space-y-4 mt-4">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-foreground mb-2">Enter Game Code</h3>
               <p className="text-sm text-muted-foreground">Ask your friend for the 4-digit code</p>
             </div>
             
@@ -165,7 +164,7 @@ export default function Landing() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="1234"
+                placeholder="0000"
                 value={gameCode}
                 onChange={(e) => setGameCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 onKeyDown={(e) => {
