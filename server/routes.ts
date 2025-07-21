@@ -191,81 +191,69 @@ async function processRound(gameId: number, round: number, question: number) {
     return; // Wait for either time to expire or both players to answer
   }
   
-  let winnerId: number | null = null;
+  console.log(`Processing round ${round}, question ${question} with ${answers.length} answers`);
   
-  // Determine winner based on answers received (could be 1 or 2 players)
+  let winnerId: number | null = null;
   const questionData = game.questionData as any;
   
   if (questionData?.type === 'multiple_choice') {
-    // For multiple choice, the correct answer should be an index
+    // Question 1: Multiple Choice Logic
     const correctIndex = typeof questionData.correct === 'string' ? 
       questionData.options?.indexOf(questionData.correct) : questionData.correct;
     
     const correctAnswers = answers.filter(a => {
       const answerIndex = parseInt(a.answer);
-      console.log(`Checking answer: submitted=${answerIndex}, correct=${correctIndex}, equal=${answerIndex === correctIndex}`);
+      console.log(`MC Check: Player ${a.playerId} submitted ${answerIndex}, correct is ${correctIndex}`);
       return answerIndex === correctIndex;
     });
     
-    console.log(`Multiple choice: ${correctAnswers.length} correct answers out of ${answers.length} total`);
-  console.log(`Question data:`, questionData);
-  console.log(`All answers:`, answers.map(a => ({ playerId: a.playerId, answer: a.answer, submitted: a.submittedAt })));
+    console.log(`Multiple choice result: ${correctAnswers.length} correct out of ${answers.length} total`);
     
     if (correctAnswers.length === 1) {
-      // Only one player got it right - they win the round immediately
+      // One correct, one wrong: Winner determined
       winnerId = correctAnswers[0].playerId;
-    } else if (correctAnswers.length === 2) {
-      // Both correct, fastest wins the round
-      winnerId = correctAnswers.sort((a, b) => 
-        new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
-      )[0].playerId;
+      console.log(`Round ${round} winner: Player ${winnerId} (only correct answer)`);
     } else {
-      // Both wrong or no one answered - move to next question
-      winnerId = null;
-      
-      if (question === 1) {
-        // No winner on question 1, move to question 2
-        await storage.updateGame(gameId, {
-          waitingForAnswers: true,
-          lastRoundWinnerId: null
-        });
-        setTimeout(async () => {
-          await startNextQuestion(gameId, round, 2);
-        }, 3000);
-        return;
-      } else if (question === 2) {
-        // No winner on question 2, move to next round
-        await storage.updateGame(gameId, {
-          waitingForAnswers: true,
-          lastRoundWinnerId: null
-        });
-        setTimeout(async () => {
-          await startNextQuestion(gameId, round + 1, 1);
-        }, 3000);
-        return;
-      }
+      // Both correct or both wrong: Move to question 2
+      console.log(`No winner yet, moving to question 2`);
+      await storage.updateGame(gameId, {
+        waitingForAnswers: true,
+        lastRoundWinnerId: null
+      });
+      setTimeout(async () => {
+        await startNextQuestion(gameId, round, 2);
+      }, 3000);
+      return;
     }
+    
   } else if (questionData?.type === 'integer') {
+    // Question 2: Integer Logic
     const correctAnswer = questionData.correct;
+    console.log(`Integer question: correct answer is ${correctAnswer}`);
     
     if (answers.length === 0) {
+      // No answers - no winner
       winnerId = null;
     } else if (answers.length === 1) {
-      // Only one player answered - they win by default
+      // Only one player answered - they win
       winnerId = answers[0].playerId;
+      console.log(`Round ${round} winner: Player ${winnerId} (only answer)`);
     } else {
-      // Two players answered - determine winner by accuracy and speed
+      // Both answered - apply integer rules
       const exactCorrect = answers.filter(a => parseInt(a.answer) === correctAnswer);
       
       if (exactCorrect.length === 1) {
+        // One correct answer
         winnerId = exactCorrect[0].playerId;
+        console.log(`Round ${round} winner: Player ${winnerId} (exact answer)`);
       } else if (exactCorrect.length === 2) {
-        // Both exact, fastest wins
+        // Both correct - fastest wins
         winnerId = exactCorrect.sort((a, b) => 
           new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
         )[0].playerId;
+        console.log(`Round ${round} winner: Player ${winnerId} (fastest correct)`);
       } else {
-        // Neither exact, closest wins
+        // Both wrong - closest wins
         const withDistance = answers.map(a => ({
           ...a,
           distance: Math.abs(parseInt(a.answer) - correctAnswer)
@@ -277,59 +265,60 @@ async function processRound(gameId: number, round: number, question: number) {
         });
         
         winnerId = withDistance[0].playerId;
+        console.log(`Round ${round} winner: Player ${winnerId} (closest answer, distance: ${withDistance[0].distance})`);
       }
     }
   }
   
-  // Show results before proceeding
+  // Update game with round result
   await storage.updateGame(gameId, {
     waitingForAnswers: true,
     lastRoundWinnerId: winnerId
   });
   
   if (winnerId) {
-    // Update winner's score (they won the round)
+    // Winner gets a point and game ends (1 round only for testing)
     const winner = await storage.getPlayerById(winnerId);
     if (winner) {
       const newScore = (winner.score || 0) + 1;
       await storage.updatePlayerScore(winnerId, newScore);
-      console.log(`Player ${winner.name} wins round ${round}, new score: ${newScore}`);
+      console.log(`Player ${winner.name} wins round ${round}, final score: ${newScore}`);
       
-      // Check if game is won (first to 5)
-      if (newScore >= 5) {
+      // Game ends after 1 round for testing
+      setTimeout(async () => {
         await storage.updateGame(gameId, {
           status: "finished",
           winnerId: winnerId,
           lastRoundWinnerId: winnerId,
           waitingForAnswers: true
         });
-        return;
-      }
-      
-      // Move to next round after 5 seconds (time to show results)
-      setTimeout(async () => {
-        await startNextQuestion(gameId, round + 1, 1);
       }, 5000);
     }
   } else {
-    // No winner for this question
-    if (question === 2) {
-      // End of round with no winner, move to next round
-      setTimeout(async () => {
-        await startNextQuestion(gameId, round + 1, 1);
-      }, 3000);
-    }
-    // For question 1, the timeout was already set above
+    // No winner after both questions - game ends in draw
+    console.log(`Round ${round} ends with no winner`);
+    setTimeout(async () => {
+      await storage.updateGame(gameId, {
+        status: "finished",
+        winnerId: null,
+        lastRoundWinnerId: null,
+        waitingForAnswers: true
+      });
+    }, 5000);
   }
 }
 
 async function startNextQuestion(gameId: number, round: number, question: number) {
-  let questionData;
+  console.log(`Starting round ${round}, question ${question}`);
   
+  let questionData;
   if (question === 1) {
     questionData = await getRandomQuestion('multiple_choice');
-  } else {
+  } else if (question === 2) {
     questionData = await getRandomQuestion('integer');
+  } else {
+    console.error(`Invalid question number: ${question}`);
+    return;
   }
   
   const deadline = new Date(Date.now() + 15000); // 15 seconds
@@ -344,8 +333,11 @@ async function startNextQuestion(gameId: number, round: number, question: number
     lastRoundWinnerId: null
   });
   
-  // Auto-process after deadline (with small buffer)
+  console.log(`Question ${question} started: ${questionData.text}`);
+  
+  // Auto-process after deadline
   setTimeout(async () => {
+    console.log(`Time's up for round ${round}, question ${question}`);
     await processRound(gameId, round, question);
   }, 15100);
 }

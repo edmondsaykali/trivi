@@ -74,10 +74,35 @@ Preferred communication style: Simple, everyday language.
 4. Game state updates trigger UI refresh via polling
 5. Process repeats until one player reaches 5 round wins
 
-### Real-time Synchronization
+### Real-time Synchronization  
 - Client polling every 1 second for game state updates
 - Server-side deadline enforcement prevents client manipulation
 - State changes immediately reflected across all connected clients
+
+## Recent Changes (Jan 21, 2025)
+
+### Critical Bug Fixes
+- ✅ **FIXED: Answer validation completely rewritten** - Multiple choice questions now properly recognize correct answers
+- ✅ **FIXED: Game logic redesigned** - Implemented exact specification for 1-round testing
+- ✅ **FIXED: Score tracking** - Players now properly receive points when winning rounds
+- ✅ **FIXED: Question progression** - Proper flow from Question 1 (multiple choice) to Question 2 (integer) based on results
+
+### Game Logic Implementation (1 Round for Testing)
+**Question 1: Multiple Choice**
+- Both players get same question with 15-second deadline
+- One correct, one wrong: Winner determined immediately, round ends
+- Both correct or both wrong: Move to Question 2
+
+**Question 2: Integer Input**  
+- Winner determined by: 1) Exact correct answer, 2) Speed if both correct, 3) Proximity if both wrong
+- Game ends after 1 round (will extend to 5 rounds later)
+
+### UI Improvements
+- ✅ Minimized lobby page design while keeping functionality
+- ✅ Made waiting messages more subtle without popup boxes
+- ✅ Added mobile scroll-to-top functionality
+- ✅ Removed "(max 10 chars)" text from landing page
+- ✅ Comprehensive debugging added for answer processing
 
 ## External Dependencies
 
