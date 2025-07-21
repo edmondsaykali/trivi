@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, databaseReady } from "./storage";
-import { insertGameSchema, insertPlayerSchema, insertAnswerSchema } from "@shared/schema";
+import { insertGameSchema, insertPlayerSchema, insertAnswerSchema, Answer } from "@shared/schema";
 import { z } from "zod";
 
 // Expanded questions pool for engaging trivia gameplay
@@ -634,7 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!round || !question) {
         // Get all rounds
         const rounds = await storage.getRoundsByGameId(gameId);
-        const allAnswers = [];
+        const allAnswers: Answer[] = [];
         
         // Get answers for each round
         for (const r of rounds) {
@@ -657,12 +657,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Add if not already included
           currentRoundAnswers.forEach(ans => {
-            if (!allAnswers.find(a => a.id === ans.id)) {
+            if (!allAnswers.find((a: Answer) => a.id === ans.id)) {
               allAnswers.push(ans);
             }
           });
           currentQ2Answers.forEach(ans => {
-            if (!allAnswers.find(a => a.id === ans.id)) {
+            if (!allAnswers.find((a: Answer) => a.id === ans.id)) {
               allAnswers.push(ans);
             }
           });
@@ -777,8 +777,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session ID required" });
       }
       
+      // Get game and check status
+      const game = await storage.getGameById(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Get player who is leaving
+      const players = await storage.getPlayersByGameId(gameId);
+      const leavingPlayer = players.find(p => p.sessionId === sessionId);
+      const remainingPlayer = players.find(p => p.sessionId !== sessionId);
+      
+      if (!leavingPlayer) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
       // Remove player from game
       await storage.removePlayerFromGame(gameId, sessionId);
+      
+      // If game is active and there's a remaining player, they win
+      if (game.status === 'playing' && remainingPlayer) {
+        await storage.updateGame(gameId, {
+          status: 'finished',
+          winnerId: remainingPlayer.id
+        });
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left. ${remainingPlayer.name} wins by default.`);
+      }
       
       res.json({ message: "Left game successfully" });
     } catch (error) {

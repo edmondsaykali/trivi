@@ -4,9 +4,10 @@ import { cn } from '@/lib/utils';
 interface TimerBarProps {
   deadline: string | null;
   className?: string;
+  minimal?: boolean;
 }
 
-export function TimerBar({ deadline, className }: TimerBarProps) {
+export function TimerBar({ deadline, className, minimal = false }: TimerBarProps) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [percentage, setPercentage] = useState(100);
 
@@ -31,6 +32,15 @@ export function TimerBar({ deadline, className }: TimerBarProps) {
 
     return () => clearInterval(interval);
   }, [deadline]);
+
+  if (minimal) {
+    return (
+      <div 
+        className={cn("h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-100", className)}
+        style={{ width: `${percentage}%` }}
+      />
+    );
+  }
 
   return (
     <div className={cn("bg-white rounded-2xl p-4 shadow-sm", className)}>

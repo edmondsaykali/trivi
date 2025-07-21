@@ -79,6 +79,20 @@ export default function Game({ params }: GameProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
+  // Check if opponent dropped out during game
+  useEffect(() => {
+    if (gameState && gameState.players.length < 2 && gameState.game.status === 'playing') {
+      toast({
+        title: "Opponent left",
+        description: "Your opponent has left the game. You win!",
+      });
+      // Wait a moment for the backend to process
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
+  }, [gameState, toast]);
+
   // Scroll to top on component mount  
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -211,7 +225,7 @@ export default function Game({ params }: GameProps) {
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Game Header */}
-        <div className="flex justify-between items-center bg-card rounded-2xl p-4 shadow-lg border">
+        <div className="flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
@@ -221,40 +235,37 @@ export default function Game({ params }: GameProps) {
             >
               <Home className="w-4 h-4" />
             </Button>
-            <div className="text-sm font-medium text-muted-foreground">
-              Round {game.currentRound} of 5 - Question {game.currentQuestion}
+            <div className="text-sm text-muted-foreground">
+              Round {game.currentRound}
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex space-x-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{currentPlayer.score}</div>
-                <div className="text-xs text-muted-foreground">You</div>
-              </div>
-              <div className="text-muted-foreground">vs</div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-500">{opponent?.score || 0}</div>
-                <div className="text-xs text-muted-foreground">{opponent?.name || 'Opponent'}</div>
-              </div>
+          <div className="flex items-center space-x-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-foreground">{currentPlayer.score}</div>
+              <div className="text-xs text-muted-foreground">You</div>
+            </div>
+            <div className="text-muted-foreground text-sm">vs</div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-foreground">{opponent?.score || 0}</div>
+              <div className="text-xs text-muted-foreground">{opponent?.name || 'Opponent'}</div>
             </div>
           </div>
         </div>
 
-        {/* Timer Bar */}
-        <TimerBar deadline={game.questionDeadline || null} />
-
         {/* Question Card */}
         <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-6">
-          <div className="text-center space-y-2">
-            {question.type === 'multiple_choice' && (
-              <div className="text-sm font-medium px-3 py-1 rounded-full inline-block text-primary bg-primary/10">
-                Multiple Choice
-              </div>
-            )}
-            <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
-            {question.type === 'integer' && (
-              <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
-            )}
+          <div className="space-y-4">
+            {/* Integrated Timer Bar */}
+            <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
+              <TimerBar deadline={game.questionDeadline || null} minimal />
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
+              {question.type === 'integer' && (
+                <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
+              )}
+            </div>
           </div>
 
           {question.type === 'multiple_choice' && question.options ? (
@@ -265,20 +276,20 @@ export default function Game({ params }: GameProps) {
                   onClick={() => handleMultipleChoice(index)}
                   disabled={hasAnswered || isSubmitting}
                   className={`w-full text-left p-4 border-2 rounded-xl transition-all group ${
-                    selectedAnswer === index && hasAnswered
+                    selectedAnswer === index
                       ? 'border-primary bg-primary/5'
                       : hasAnswered
-                      ? 'border-slate-200 bg-slate-50 cursor-not-allowed'
-                      : 'border-slate-200 hover:border-primary hover:bg-primary/5'
+                      ? 'border-muted bg-muted/50 cursor-not-allowed'
+                      : 'border-border hover:border-primary hover:bg-primary/5'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                       selectedAnswer === index
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : hasAnswered
-                        ? 'bg-slate-200 text-slate-400'
-                        : 'bg-slate-100 text-slate-600 group-hover:bg-primary group-hover:text-white'
+                        ? 'bg-muted text-muted-foreground'
+                        : 'bg-muted text-foreground group-hover:bg-primary group-hover:text-primary-foreground'
                     }`}>
                       {String.fromCharCode(65 + index)}
                     </div>
