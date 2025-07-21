@@ -138,8 +138,22 @@ function getRandomAvatar(): string {
   return avatars[Math.floor(Math.random() * avatars.length)];
 }
 
-function getRandomQuestion(type: 'multipleChoice' | 'integer') {
-  const pool = QUESTIONS_POOL[type];
+async function getRandomQuestion(type: 'multiple_choice' | 'integer') {
+  // Try to get question from Supabase
+  const question = await storage.getRandomQuestionByType(type);
+  if (question) {
+    return {
+      text: question.text,
+      options: question.options as string[] || undefined,
+      correct: question.correctAnswer,
+      category: question.category,
+      type: question.type
+    };
+  }
+  
+  // Fallback to hardcoded questions if database is unavailable
+  const typeMapping = { 'multiple_choice': 'multipleChoice', 'integer': 'integer' } as const;
+  const pool = QUESTIONS_POOL[typeMapping[type]];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -236,9 +250,9 @@ async function startNextQuestion(gameId: number, round: number, question: number
   let questionData;
   
   if (question === 1) {
-    questionData = { ...getRandomQuestion('multipleChoice'), type: 'multipleChoice' };
+    questionData = await getRandomQuestion('multiple_choice');
   } else {
-    questionData = { ...getRandomQuestion('integer'), type: 'integer' };
+    questionData = await getRandomQuestion('integer');
   }
   
   const deadline = new Date(Date.now() + 15000); // 15 seconds

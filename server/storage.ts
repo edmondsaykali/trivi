@@ -1,4 +1,4 @@
-import { games, players, answers, rounds, type Game, type Player, type Answer, type Round, type InsertGame, type InsertPlayer, type InsertAnswer, type InsertRound } from "@shared/schema";
+import { games, players, answers, rounds, questions, type Game, type Player, type Answer, type Round, type Question, type InsertGame, type InsertPlayer, type InsertAnswer, type InsertRound } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -25,6 +25,9 @@ export interface IStorage {
   createRound(round: InsertRound): Promise<Round>;
   getRoundsByGameId(gameId: number): Promise<Round[]>;
   updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined>;
+  
+  // Questions
+  getRandomQuestionByType(type: string): Promise<Question | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -163,6 +166,12 @@ export class MemStorage implements IStorage {
     this.rounds.set(id, updatedRound);
     return updatedRound;
   }
+
+  // Questions - Not needed for in-memory, uses hardcoded questions
+  async getRandomQuestionByType(type: string): Promise<Question | undefined> {
+    // This would use hardcoded questions for in-memory storage
+    return undefined;
+  }
 }
 
 // Database Storage Implementation
@@ -273,6 +282,13 @@ export class DatabaseStorage implements IStorage {
   async updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined> {
     const [round] = await this.db.update(rounds).set(updates).where(eq(rounds.id, id)).returning();
     return round;
+  }
+
+  // Questions
+  async getRandomQuestionByType(type: string): Promise<Question | undefined> {
+    const result = await this.db.select().from(questions).where(eq(questions.type, type));
+    if (result.length === 0) return undefined;
+    return result[Math.floor(Math.random() * result.length)];
   }
 }
 

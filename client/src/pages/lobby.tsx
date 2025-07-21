@@ -50,12 +50,12 @@ export default function Lobby({ params }: LobbyProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-pulse">
             <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
           </div>
-          <p className="text-slate-600">Loading lobby...</p>
+          <p className="text-muted-foreground">Loading lobby...</p>
         </div>
       </div>
     );
@@ -63,9 +63,9 @@ export default function Lobby({ params }: LobbyProps) {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-600">Game not found</p>
+          <p className="text-muted-foreground">Game not found</p>
           <Button 
             onClick={() => setLocation('/')}
             className="mt-4"
@@ -81,52 +81,52 @@ export default function Lobby({ params }: LobbyProps) {
   const canStart = players.length === 2 && isCreator;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">Game Lobby</h1>
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <p className="text-sm text-slate-600 mb-2">Game Code</p>
+          <h1 className="text-2xl font-bold text-foreground">Game Lobby</h1>
+          <div className="bg-card rounded-2xl p-6 shadow-lg border">
+            <p className="text-sm text-muted-foreground mb-2">Game Code</p>
             <div className="text-4xl font-bold text-primary tracking-widest">{game.code}</div>
-            <p className="text-sm text-slate-500 mt-2">Share this code with your friend</p>
+            <p className="text-sm text-muted-foreground mt-2">Share this code with your friend</p>
           </div>
         </div>
 
         {/* Players List */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Players ({players.length}/2)</h2>
+        <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Players ({players.length}/2)</h2>
           
           <div className="space-y-3">
             {players.map((player) => (
-              <div key={player.id} className="flex items-center space-x-4 p-3 bg-slate-50 rounded-xl">
+              <div key={player.id} className="flex items-center space-x-4 p-3 bg-secondary/50 rounded-xl">
                 <PlayerAvatar 
                   src={player.avatar} 
                   alt={`${player.name}'s avatar`}
                   className="w-12 h-12"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-foreground">
                     {player.name}
                     {player.id === currentPlayer?.id && " (You)"}
                     {player.id === game.creatorId && " (Host)"}
                   </p>
-                  <p className="text-sm text-slate-500">Ready to play</p>
+                  <p className="text-sm text-muted-foreground">Ready to play</p>
                 </div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
             ))}
             
             {players.length < 2 && (
-              <div className="flex items-center space-x-4 p-3 bg-slate-100 rounded-xl border-2 border-dashed border-slate-300">
-                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center space-x-4 p-3 bg-muted rounded-xl border-2 border-dashed border-border">
+                <div className="w-12 h-12 bg-muted-foreground/20 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-400">Waiting for player...</p>
-                  <p className="text-sm text-slate-400">Share the game code above</p>
+                  <p className="font-medium text-muted-foreground">Waiting for player...</p>
+                  <p className="text-sm text-muted-foreground">Share the game code above</p>
                 </div>
               </div>
             )}
@@ -139,7 +139,7 @@ export default function Lobby({ params }: LobbyProps) {
             <div className="animate-pulse">
               <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
             </div>
-            <p className="text-slate-600">Waiting for another player to join...</p>
+            <p className="text-muted-foreground">Waiting for another player to join...</p>
           </div>
         ) : (
           <div className="text-center space-y-4">

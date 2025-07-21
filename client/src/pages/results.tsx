@@ -32,12 +32,12 @@ export default function Results({ params }: ResultsProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-pulse">
             <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
           </div>
-          <p className="text-slate-600">Loading results...</p>
+          <p className="text-muted-foreground">Loading results...</p>
         </div>
       </div>
     );
@@ -45,9 +45,9 @@ export default function Results({ params }: ResultsProps) {
 
   if (!gameState || !currentPlayer || !opponent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-600">Game not found</p>
+          <p className="text-muted-foreground">Game not found</p>
           <Button onClick={returnToLanding} className="mt-4">
             Back to Home
           </Button>
@@ -62,11 +62,11 @@ export default function Results({ params }: ResultsProps) {
   const isWinner = currentPlayer.id === game.winnerId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
       <div className="max-w-2xl mx-auto space-y-8 py-8">
         {/* Winner Celebration */}
         <div className="text-center space-y-4">
-          <div className="w-24 h-24 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center mx-auto">
+          <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mx-auto">
             {isWinner ? (
               <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3l14 9-14 9V3z"></path>

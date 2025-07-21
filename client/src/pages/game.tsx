@@ -89,12 +89,12 @@ export default function Game({ params }: GameProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-pulse">
             <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
           </div>
-          <p className="text-slate-600">Loading game...</p>
+          <p className="text-muted-foreground">Loading game...</p>
         </div>
       </div>
     );
@@ -102,9 +102,9 @@ export default function Game({ params }: GameProps) {
 
   if (!gameState || !currentPlayer || !opponent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-600">Game not found</p>
+          <p className="text-muted-foreground">Game not found</p>
           <Button onClick={() => setLocation('/')} className="mt-4">
             Back to Home
           </Button>
@@ -118,12 +118,12 @@ export default function Game({ params }: GameProps) {
 
   if (!question) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-pulse">
             <div className="w-8 h-8 bg-primary rounded-full mx-auto mb-2"></div>
           </div>
-          <p className="text-slate-600">Preparing question...</p>
+          <p className="text-muted-foreground">Preparing question...</p>
         </div>
       </div>
     );
@@ -134,16 +134,16 @@ export default function Game({ params }: GameProps) {
     const winner = gameState.players.find(p => p.id === game.lastRoundWinnerId);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-6 transform animate-pulse">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+        <div className="bg-card rounded-2xl p-6 w-full max-w-md space-y-6 transform animate-pulse shadow-lg border">
           <div className="text-center space-y-2">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Round Winner</h2>
-            <p className="text-lg text-slate-600">{winner?.name}</p>
+            <h2 className="text-2xl font-bold text-foreground">Round Winner</h2>
+            <p className="text-lg text-muted-foreground">{winner?.name}</p>
           </div>
 
           <div className="flex justify-center space-x-8">

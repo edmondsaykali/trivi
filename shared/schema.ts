@@ -48,6 +48,16 @@ export const rounds = pgTable("rounds", {
   completedAt: timestamp("completed_at"),
 });
 
+export const questions = pgTable("questions", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  options: jsonb("options"), // Array of strings for multiple choice
+  correctAnswer: text("correct_answer").notNull(),
+  category: text("category").notNull(),
+  type: text("type").notNull(), // "multiple_choice" or "integer"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertGameSchema = createInsertSchema(games).omit({
   id: true,
@@ -70,13 +80,20 @@ export const insertRoundSchema = createInsertSchema(rounds).omit({
   completedAt: true,
 });
 
+export const insertQuestionSchema = createInsertSchema(questions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Game = typeof games.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type Answer = typeof answers.$inferSelect;
 export type Round = typeof rounds.$inferSelect;
+export type Question = typeof questions.$inferSelect;
 
 export type InsertGame = z.infer<typeof insertGameSchema>;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
 export type InsertRound = z.infer<typeof insertRoundSchema>;
+export type InsertQuestion = z.infer<typeof insertQuestionSchema>;

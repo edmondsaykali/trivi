@@ -100,26 +100,10 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary/10 to-secondary/20">
       <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold text-slate-900">Trivi</h1>
-            <p className="text-lg text-slate-600 mt-2">Challenge friends in real-time trivia battles</p>
-          </div>
-        </div>
-
         {/* Username Input */}
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-sm font-medium text-slate-700">
-            Your Name
-          </Label>
           <Input
             id="username"
             type="text"
@@ -131,7 +115,7 @@ export default function Landing() {
                 createGame();
               }
             }}
-            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-4 py-3 rounded-xl text-lg"
           />
         </div>
 
@@ -140,7 +124,7 @@ export default function Landing() {
           <Button
             onClick={createGame}
             disabled={isCreating}
-            className="w-full bg-gradient-to-r from-primary to-purple-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-primary/90 hover:to-purple-600/90 transition-all transform hover:scale-105 shadow-lg"
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg"
           >
             {isCreating ? 'Creating...' : 'Create Game'}
           </Button>
@@ -149,7 +133,7 @@ export default function Landing() {
             onClick={() => setShowJoinModal(true)}
             variant="outline"
             disabled={isJoining}
-            className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 px-6 rounded-xl font-semibold text-lg hover:border-primary hover:text-primary transition-all"
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all"
           >
             Join Game
           </Button>
@@ -157,7 +141,7 @@ export default function Landing() {
 
         {/* Join Game Modal */}
         <div className="text-center">
-          <p className="text-sm text-slate-500">Have a game code? Click "Join Game" to enter it</p>
+          <p className="text-sm text-muted-foreground">Have a game code? Click "Join Game" to enter it</p>
         </div>
       </div>
 
