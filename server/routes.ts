@@ -171,17 +171,25 @@ function generateSessionId(): string {
 }
 
 async function processRound(gameId: number, round: number, question: number) {
-  const answers = await storage.getAnswersByGameRound(gameId, round, question);
-  if (answers.length !== 2) return; // Wait for both players
-  
   const game = await storage.getGameById(gameId);
   if (!game || !game.questionData) return;
   
+  const answers = await storage.getAnswersByGameRound(gameId, round, question);
   const players = await storage.getPlayersByGameId(gameId);
+  
+  // Check if time is up or both players answered
+  const timeIsUp = game.questionDeadline && new Date() > new Date(game.questionDeadline);
+  const bothAnswered = answers.length === 2;
+  
+  if (!timeIsUp && !bothAnswered) {
+    return; // Wait for either time to expire or both players to answer
+  }
+  
   let winnerId: number | null = null;
   
-  // Determine winner based on question type
+  // Determine winner based on answers received (could be 1 or 2 players)
   const questionData = game.questionData as any;
+  
   if (questionData?.type === 'multiple_choice') {
     const correctAnswers = answers.filter(a => parseInt(a.answer) === questionData.correct);
     
@@ -192,54 +200,69 @@ async function processRound(gameId: number, round: number, question: number) {
       winnerId = correctAnswers.sort((a, b) => 
         new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
       )[0].playerId;
+    } else if (answers.length === 1) {
+      // Only one player answered and was wrong - no winner
+      winnerId = null;
     } else {
-      // Both wrong, no winner this question
-      if (question === 1) {
-        // Show waiting state for results before moving to question 2
-        await storage.updateGame(gameId, {
-          waitingForAnswers: true,
-          lastRoundWinnerId: null
-        });
-        setTimeout(async () => {
-          await startNextQuestion(gameId, round, 2);
-        }, 3000);
-        return;
-      } else {
-        // Question 2 and both wrong - no round winner, move to next round
-        await storage.updateGame(gameId, {
-          waitingForAnswers: true,
-          lastRoundWinnerId: null
-        });
-        setTimeout(async () => {
-          await startNextQuestion(gameId, round + 1, 1);
-        }, 3000);
-        return;
-      }
+      // Both wrong or no answers, no winner this question
+      winnerId = null;
+    }
+    
+    // Handle question progression
+    if (!winnerId && question === 1) {
+      // No winner on question 1, move to question 2
+      await storage.updateGame(gameId, {
+        waitingForAnswers: true,
+        lastRoundWinnerId: null
+      });
+      setTimeout(async () => {
+        await startNextQuestion(gameId, round, 2);
+      }, 3000);
+      return;
+    } else if (!winnerId && question === 2) {
+      // No winner on question 2, move to next round
+      await storage.updateGame(gameId, {
+        waitingForAnswers: true,
+        lastRoundWinnerId: null
+      });
+      setTimeout(async () => {
+        await startNextQuestion(gameId, round + 1, 1);
+      }, 3000);
+      return;
     }
   } else if (questionData?.type === 'integer') {
     const correctAnswer = questionData.correct;
-    const exactCorrect = answers.filter(a => parseInt(a.answer) === correctAnswer);
     
-    if (exactCorrect.length === 1) {
-      winnerId = exactCorrect[0].playerId;
-    } else if (exactCorrect.length === 2) {
-      // Both exact, fastest wins
-      winnerId = exactCorrect.sort((a, b) => 
-        new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
-      )[0].playerId;
+    if (answers.length === 0) {
+      winnerId = null;
+    } else if (answers.length === 1) {
+      // Only one player answered - they win by default
+      winnerId = answers[0].playerId;
     } else {
-      // Neither exact, closest wins
-      const withDistance = answers.map(a => ({
-        ...a,
-        distance: Math.abs(parseInt(a.answer) - correctAnswer)
-      }));
+      // Two players answered - determine winner by accuracy and speed
+      const exactCorrect = answers.filter(a => parseInt(a.answer) === correctAnswer);
       
-      withDistance.sort((a, b) => {
-        if (a.distance !== b.distance) return a.distance - b.distance;
-        return new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime();
-      });
-      
-      winnerId = withDistance[0].playerId;
+      if (exactCorrect.length === 1) {
+        winnerId = exactCorrect[0].playerId;
+      } else if (exactCorrect.length === 2) {
+        // Both exact, fastest wins
+        winnerId = exactCorrect.sort((a, b) => 
+          new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
+        )[0].playerId;
+      } else {
+        // Neither exact, closest wins
+        const withDistance = answers.map(a => ({
+          ...a,
+          distance: Math.abs(parseInt(a.answer) - correctAnswer)
+        }));
+        
+        withDistance.sort((a, b) => {
+          if (a.distance !== b.distance) return a.distance - b.distance;
+          return new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime();
+        });
+        
+        winnerId = withDistance[0].playerId;
+      }
     }
   }
   
@@ -304,7 +327,7 @@ async function startNextQuestion(gameId: number, round: number, question: number
     lastRoundWinnerId: null
   });
   
-  // Auto-process after deadline
+  // Auto-process after deadline (with small buffer)
   setTimeout(async () => {
     await processRound(gameId, round, question);
   }, 15100);
@@ -500,9 +523,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         game.currentQuestion!
       );
       
-      if (allAnswers.length === 2) {
-        setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
-      }
+      // Always trigger processing to check if we should proceed
+      setTimeout(() => processRound(gameId, game.currentRound!, game.currentQuestion!), 100);
       
       res.json({ success: true, answer: answerRecord });
     } catch (error) {
