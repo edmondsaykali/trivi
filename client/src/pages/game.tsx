@@ -6,6 +6,7 @@ import { TimerBar } from '@/components/ui/timer-bar';
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { ArrowLeft } from 'lucide-react';
 import type { Question } from '@/types/game';
 
 interface GameProps {
@@ -149,19 +150,19 @@ export default function Game({ params }: GameProps) {
           <div className="flex justify-center space-x-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-primary">{currentPlayer.score}</div>
-              <div className="text-sm text-slate-500">You</div>
+              <div className="text-sm text-muted-foreground">You</div>
             </div>
-            <div className="text-center text-slate-300 self-center">
+            <div className="text-center text-muted-foreground self-center">
               <div className="text-lg">vs</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-yellow-500">{opponent.score}</div>
-              <div className="text-sm text-slate-500">{opponent.name}</div>
+              <div className="text-sm text-muted-foreground">{opponent.name}</div>
             </div>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-slate-500">Next question coming up...</p>
+            <p className="text-sm text-muted-foreground">Next question coming up...</p>
           </div>
         </div>
       </div>
@@ -169,12 +170,20 @@ export default function Game({ params }: GameProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Game Header */}
-        <div className="flex justify-between items-center bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex justify-between items-center bg-card rounded-2xl p-4 shadow-lg border">
           <div className="flex items-center space-x-3">
-            <div className="text-sm font-medium text-slate-600">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation('/')}
+              className="p-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div className="text-sm font-medium text-muted-foreground">
               Round {game.currentRound} of 5 - Question {game.currentQuestion}
             </div>
           </div>
@@ -182,12 +191,12 @@ export default function Game({ params }: GameProps) {
             <div className="flex space-x-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{currentPlayer.score}</div>
-                <div className="text-xs text-slate-500">You</div>
+                <div className="text-xs text-muted-foreground">You</div>
               </div>
-              <div className="text-slate-300">vs</div>
+              <div className="text-muted-foreground">vs</div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-yellow-500">{opponent.score}</div>
-                <div className="text-xs text-slate-500">{opponent.name}</div>
+                <div className="text-xs text-muted-foreground">{opponent.name}</div>
               </div>
             </div>
           </div>
@@ -197,18 +206,18 @@ export default function Game({ params }: GameProps) {
         <TimerBar deadline={game.questionDeadline || null} />
 
         {/* Question Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-6">
           <div className="text-center space-y-2">
             <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
-              question.type === 'multipleChoice' 
+              question.type === 'multiple_choice' 
                 ? 'text-primary bg-primary/10' 
                 : 'text-green-600 bg-green-100'
             }`}>
-              {question.type === 'multipleChoice' ? 'Multiple Choice' : 'Number Input'}
+              {question.type === 'multiple_choice' ? 'Multiple Choice' : 'Number Input'}
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{question.text}</h2>
+            <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
             {question.type === 'integer' && (
-              <p className="text-slate-600 text-sm">Enter your best guess as a whole number</p>
+              <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
             )}
           </div>
 

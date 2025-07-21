@@ -5,6 +5,7 @@ import { PlayerAvatar } from '@/components/ui/player-avatar';
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { ArrowLeft } from 'lucide-react';
 
 interface LobbyProps {
   params: { id: string };
@@ -83,9 +84,22 @@ export default function Lobby({ params }: LobbyProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
       <div className="max-w-md mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation('/')}
+            className="p-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <h1 className="text-2xl font-bold text-foreground">Game Lobby</h1>
+          <div className="w-9"></div> {/* Spacer for centering */}
+        </div>
+        
+        {/* Game Code */}
+        <div className="text-center space-y-2">
           <div className="bg-card rounded-2xl p-6 shadow-lg border">
             <p className="text-sm text-muted-foreground mb-2">Game Code</p>
             <div className="text-4xl font-bold text-primary tracking-widest">{game.code}</div>
@@ -148,7 +162,7 @@ export default function Lobby({ params }: LobbyProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <p className="text-slate-600">All players ready!</p>
+            <p className="text-muted-foreground">All players ready!</p>
           </div>
         )}
 
@@ -157,7 +171,7 @@ export default function Lobby({ params }: LobbyProps) {
           <Button
             onClick={startGame}
             disabled={isStarting}
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-green-500/90 hover:to-green-600/90 transition-all shadow-lg"
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all shadow-lg"
           >
             {isStarting ? 'Starting Game...' : 'Start Game'}
           </Button>
@@ -165,7 +179,7 @@ export default function Lobby({ params }: LobbyProps) {
         
         {!isCreator && players.length === 2 && (
           <div className="text-center">
-            <p className="text-slate-600">Waiting for host to start the game...</p>
+            <p className="text-muted-foreground">Waiting for host to start the game...</p>
           </div>
         )}
       </div>

@@ -258,6 +258,7 @@ async function startNextQuestion(gameId: number, round: number, question: number
   const deadline = new Date(Date.now() + 15000); // 15 seconds
   
   await storage.updateGame(gameId, {
+    status: 'playing',
     currentRound: round,
     currentQuestion: question,
     questionData,
