@@ -193,7 +193,7 @@ async function processRound(gameId: number, round: number, question: number) {
         new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
       )[0].playerId;
     } else {
-      // Both wrong, no winner this question, move to question 2
+      // Both wrong, no winner this question
       if (question === 1) {
         // Show waiting state for results before moving to question 2
         await storage.updateGame(gameId, {
@@ -202,6 +202,16 @@ async function processRound(gameId: number, round: number, question: number) {
         });
         setTimeout(async () => {
           await startNextQuestion(gameId, round, 2);
+        }, 3000);
+        return;
+      } else {
+        // Question 2 and both wrong - no round winner, move to next round
+        await storage.updateGame(gameId, {
+          waitingForAnswers: true,
+          lastRoundWinnerId: null
+        });
+        setTimeout(async () => {
+          await startNextQuestion(gameId, round + 1, 1);
         }, 3000);
         return;
       }
@@ -233,23 +243,25 @@ async function processRound(gameId: number, round: number, question: number) {
     }
   }
   
+  // Always show results before proceeding, even if no winner
+  await storage.updateGame(gameId, {
+    waitingForAnswers: true,
+    lastRoundWinnerId: winnerId
+  });
+  
   if (winnerId) {
     // Update winner's score
     const winner = await storage.getPlayerById(winnerId);
     if (winner) {
       await storage.updatePlayerScore(winnerId, (winner.score || 0) + 1);
       
-      // Update game state
-      await storage.updateGame(gameId, {
-        lastRoundWinnerId: winnerId,
-        waitingForAnswers: true
-      });
-      
       // Check if game is won (first to 5)
       if ((winner.score || 0) + 1 >= 5) {
         await storage.updateGame(gameId, {
           status: "finished",
-          winnerId: winnerId
+          winnerId: winnerId,
+          lastRoundWinnerId: winnerId,
+          waitingForAnswers: true
         });
         return;
       }
@@ -259,6 +271,15 @@ async function processRound(gameId: number, round: number, question: number) {
         await startNextQuestion(gameId, round + 1, 1);
       }, 5000);
     }
+  } else {
+    // No winner for this question
+    if (question === 2) {
+      // End of round with no winner, move to next round
+      setTimeout(async () => {
+        await startNextQuestion(gameId, round + 1, 1);
+      }, 3000);
+    }
+    // For question 1, the timeout was already set above
   }
 }
 

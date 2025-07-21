@@ -3,13 +3,14 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { JoinGameModal } from '@/components/game/join-game-modal';
+
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
 export default function Landing() {
   const [username, setUsername] = useState('');
-  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showJoinSection, setShowJoinSection] = useState(false);
+  const [gameCode, setGameCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [, setLocation] = useLocation();
@@ -60,12 +61,21 @@ export default function Landing() {
     }
   };
 
-  const joinGame = async (code: string) => {
+  const joinGame = async () => {
     if (!username.trim()) {
       toast({
         variant: "destructive",
         title: "Name Required",
         description: "Please enter your name to join a game.",
+      });
+      return;
+    }
+
+    if (!gameCode.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Code Required",
+        description: "Please enter a 4-digit game code.",
       });
       return;
     }
@@ -76,7 +86,7 @@ export default function Landing() {
       sessionStorage.setItem('trivi-username', username.trim());
       
       const response = await apiRequest('POST', '/api/games/join', {
-        code,
+        code: gameCode.trim(),
         name: username.trim()
       });
       
@@ -86,7 +96,8 @@ export default function Landing() {
       sessionStorage.setItem('trivi-session', result.sessionId);
       sessionStorage.setItem('trivi-game-id', result.game.id.toString());
       
-      setShowJoinModal(false);
+      setShowJoinSection(false);
+      setGameCode('');
       setLocation(`/lobby/${result.game.id}`);
     } catch (error: any) {
       toast({
@@ -130,7 +141,7 @@ export default function Landing() {
           </Button>
           
           <Button
-            onClick={() => setShowJoinModal(true)}
+            onClick={() => setShowJoinSection(!showJoinSection)}
             variant="outline"
             disabled={isJoining}
             className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all"
@@ -139,17 +150,62 @@ export default function Landing() {
           </Button>
         </div>
 
-        {/* Join Game Modal */}
+        {/* Expandable Join Section */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          showJoinSection ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
+          <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-4 mt-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Enter Game Code</h3>
+              <p className="text-sm text-muted-foreground">Ask your friend for the 4-digit code</p>
+            </div>
+            
+            <div className="space-y-4">
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="1234"
+                value={gameCode}
+                onChange={(e) => setGameCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    joinGame();
+                  }
+                }}
+                className="w-full text-center text-2xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => {
+                    setShowJoinSection(false);
+                    setGameCode('');
+                  }}
+                  variant="outline"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={joinGame}
+                  disabled={!gameCode || gameCode.length !== 4 || isJoining}
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold"
+                >
+                  {isJoining ? 'Joining...' : 'Join'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Help Text */}
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">Have a game code? Click "Join Game" to enter it</p>
+          <p className="text-sm text-muted-foreground">
+            {showJoinSection ? '' : 'Have a game code? Click "Join Game" to enter it'}
+          </p>
         </div>
       </div>
-
-      <JoinGameModal
-        open={showJoinModal}
-        onOpenChange={setShowJoinModal}
-        onJoin={joinGame}
-      />
     </div>
   );
 }

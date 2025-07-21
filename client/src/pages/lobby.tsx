@@ -28,6 +28,41 @@ export default function Lobby({ params }: LobbyProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
+  // Handle disconnection cleanup when leaving lobby
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const sessionId = sessionStorage.getItem('trivi-session');
+      if (sessionId) {
+        navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
+      }
+    };
+
+    const handleNavigation = async () => {
+      const sessionId = sessionStorage.getItem('trivi-session');
+      if (sessionId) {
+        try {
+          await fetch(`/api/games/${gameId}/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+          });
+        } catch (error) {
+          console.error('Failed to leave game:', error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handleNavigation);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handleNavigation);
+      // Also clean up when component unmounts (user navigates away)
+      handleNavigation();
+    };
+  }, [gameId]);
+
   const startGame = async () => {
     if (!isCreator) return;
     
@@ -89,7 +124,21 @@ export default function Lobby({ params }: LobbyProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation('/')}
+            onClick={async () => {
+              const sessionId = sessionStorage.getItem('trivi-session');
+              if (sessionId) {
+                try {
+                  await fetch(`/api/games/${gameId}/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                  });
+                } catch (error) {
+                  console.error('Failed to leave game:', error);
+                }
+              }
+              setLocation('/');
+            }}
             className="p-2"
           >
             <ArrowLeft className="w-5 h-5" />
