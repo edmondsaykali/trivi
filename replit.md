@@ -26,10 +26,12 @@ Preferred communication style: Simple, everyday language.
 - **Game Logic**: Server-authoritative architecture with in-memory storage
 
 ### Data Storage Solutions
-- **Current Implementation**: In-memory storage with interfaces for future database integration
-- **Planned**: PostgreSQL with Drizzle ORM (schema already defined)
+- **Current Implementation**: Hybrid storage system with automatic fallback
+- **Primary**: PostgreSQL via Supabase with Drizzle ORM (schema defined and ready)
+- **Fallback**: In-memory storage for development and testing
 - **Session Storage**: Browser sessionStorage for client-side game state
-- **Real-time Updates**: Polling mechanism (placeholder for future Supabase Realtime integration)
+- **Real-time Updates**: Polling mechanism with optimized state change detection
+- **Database Schema**: Fully designed with games, players, answers, and rounds tables
 
 ## Key Components
 
