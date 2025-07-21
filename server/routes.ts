@@ -198,42 +198,41 @@ async function processRound(gameId: number, round: number, question: number) {
       return answerIndex === questionData.correct;
     });
     
+    console.log(`Multiple choice: ${correctAnswers.length} correct answers out of ${answers.length} total`);
+    
     if (correctAnswers.length === 1) {
+      // Only one player got it right - they win the round immediately
       winnerId = correctAnswers[0].playerId;
     } else if (correctAnswers.length === 2) {
-      // Both correct, fastest wins
+      // Both correct, fastest wins the round
       winnerId = correctAnswers.sort((a, b) => 
         new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime()
       )[0].playerId;
-    } else if (answers.length === 1) {
-      // Only one player answered and was wrong - no winner
-      winnerId = null;
     } else {
-      // Both wrong or no answers, no winner this question
+      // Both wrong or no one answered - move to next question
       winnerId = null;
-    }
-    
-    // Handle question progression
-    if (!winnerId && question === 1) {
-      // No winner on question 1, move to question 2
-      await storage.updateGame(gameId, {
-        waitingForAnswers: true,
-        lastRoundWinnerId: null
-      });
-      setTimeout(async () => {
-        await startNextQuestion(gameId, round, 2);
-      }, 3000);
-      return;
-    } else if (!winnerId && question === 2) {
-      // No winner on question 2, move to next round
-      await storage.updateGame(gameId, {
-        waitingForAnswers: true,
-        lastRoundWinnerId: null
-      });
-      setTimeout(async () => {
-        await startNextQuestion(gameId, round + 1, 1);
-      }, 3000);
-      return;
+      
+      if (question === 1) {
+        // No winner on question 1, move to question 2
+        await storage.updateGame(gameId, {
+          waitingForAnswers: true,
+          lastRoundWinnerId: null
+        });
+        setTimeout(async () => {
+          await startNextQuestion(gameId, round, 2);
+        }, 3000);
+        return;
+      } else if (question === 2) {
+        // No winner on question 2, move to next round
+        await storage.updateGame(gameId, {
+          waitingForAnswers: true,
+          lastRoundWinnerId: null
+        });
+        setTimeout(async () => {
+          await startNextQuestion(gameId, round + 1, 1);
+        }, 3000);
+        return;
+      }
     }
   } else if (questionData?.type === 'integer') {
     const correctAnswer = questionData.correct;
@@ -271,20 +270,22 @@ async function processRound(gameId: number, round: number, question: number) {
     }
   }
   
-  // Always show results before proceeding, even if no winner
+  // Show results before proceeding
   await storage.updateGame(gameId, {
     waitingForAnswers: true,
     lastRoundWinnerId: winnerId
   });
   
   if (winnerId) {
-    // Update winner's score
+    // Update winner's score (they won the round)
     const winner = await storage.getPlayerById(winnerId);
     if (winner) {
-      await storage.updatePlayerScore(winnerId, (winner.score || 0) + 1);
+      const newScore = (winner.score || 0) + 1;
+      await storage.updatePlayerScore(winnerId, newScore);
+      console.log(`Player ${winner.name} wins round ${round}, new score: ${newScore}`);
       
       // Check if game is won (first to 5)
-      if ((winner.score || 0) + 1 >= 5) {
+      if (newScore >= 5) {
         await storage.updateGame(gameId, {
           status: "finished",
           winnerId: winnerId,
