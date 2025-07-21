@@ -35,15 +35,20 @@ export default function Lobby({ params }: LobbyProps) {
   // Check if other player left the lobby
   useEffect(() => {
     if (gameState && gameState.players.length < 2 && gameState.game.status === 'waiting') {
-      // Only show message if we previously had 2 players
+      // Only show message if we previously had 2 players AND we're not the first player joining
       const hadTwoPlayers = sessionStorage.getItem('trivi-had-two-players') === 'true';
-      if (hadTwoPlayers) {
+      const isFirstLoad = sessionStorage.getItem('trivi-first-lobby-load') !== 'false';
+      
+      if (hadTwoPlayers && !isFirstLoad) {
         toast({
           title: "Player Left",
           description: "The other player has left the lobby.",
         });
         sessionStorage.removeItem('trivi-had-two-players');
       }
+      
+      // Mark that we've loaded the lobby at least once
+      sessionStorage.setItem('trivi-first-lobby-load', 'false');
     } else if (gameState && gameState.players.length === 2) {
       sessionStorage.setItem('trivi-had-two-players', 'true');
     }
@@ -140,8 +145,6 @@ export default function Lobby({ params }: LobbyProps) {
             <div key={player.id} className="text-center">
               <p className="text-sm font-medium text-foreground">
                 {player.name}
-                {player.id === currentPlayer?.id && " (You)"}
-                {player.id === game.creatorId && " (Host)"}
               </p>
             </div>
           ))}
@@ -153,12 +156,7 @@ export default function Lobby({ params }: LobbyProps) {
           )}
         </div>
 
-        {/* Status */}
-        {players.length < 2 && (
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Waiting for another player...</p>
-          </div>
-        )}
+
 
         {/* Start Button */}
         {canStart && (

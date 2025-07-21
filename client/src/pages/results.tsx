@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { PlayerAvatar } from '@/components/ui/player-avatar';
+
 import { useGameState } from '@/hooks/use-game-state';
 import { useQuery } from '@tanstack/react-query';
 import { Home, Trophy, Target, CheckCircle, XCircle } from 'lucide-react';
@@ -170,19 +170,12 @@ export default function Results({ params }: ResultsProps) {
           <div className="flex justify-center items-center space-x-12">
             {/* Current Player */}
             <div className="text-center">
-              <div className="relative">
-                <PlayerAvatar 
-                  src={currentPlayer.avatar} 
-                  alt={`${currentPlayer.name}'s avatar`}
-                  className="w-20 h-20 mx-auto"
-                />
-                <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center ${
-                  isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
-                }`}>
-                  <span className={`text-lg font-bold ${isWinner ? 'text-white' : 'text-muted-foreground'}`}>
-                    {currentPlayer.score}
-                  </span>
-                </div>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+                isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
+              }`}>
+                <span className={`text-2xl font-bold ${isWinner ? 'text-white' : 'text-muted-foreground'}`}>
+                  {currentPlayer.score}
+                </span>
               </div>
               <div className="mt-3">
                 <p className="font-semibold text-foreground">{currentPlayer.name}</p>
@@ -196,19 +189,12 @@ export default function Results({ params }: ResultsProps) {
             
             {/* Opponent */}
             <div className="text-center">
-              <div className="relative">
-                <PlayerAvatar 
-                  src={opponent.avatar} 
-                  alt={`${opponent.name}'s avatar`}
-                  className="w-20 h-20 mx-auto"
-                />
-                <div className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center ${
-                  !isDraw && !isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
-                }`}>
-                  <span className={`text-lg font-bold ${!isDraw && !isWinner ? 'text-white' : 'text-muted-foreground'}`}>
-                    {opponent.score}
-                  </span>
-                </div>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+                !isDraw && !isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
+              }`}>
+                <span className={`text-2xl font-bold ${!isDraw && !isWinner ? 'text-white' : 'text-muted-foreground'}`}>
+                  {opponent.score}
+                </span>
               </div>
               <div className="mt-3">
                 <p className="font-semibold text-foreground">{opponent.name}</p>
@@ -220,27 +206,67 @@ export default function Results({ params }: ResultsProps) {
           </div>
         </div>
 
-        {/* Simplified Game History */}
+        {/* Detailed Game History */}
         {gameHistory.length > 0 && (
           <div className="bg-card rounded-2xl p-6 shadow-lg border">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Rounds</h2>
-            <div className="space-y-2">
-              {gameHistory.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <span className="text-sm text-muted-foreground">Round {item.round}</span>
-                  <span className={`text-sm font-medium ${
-                    item.roundWinner === currentPlayer.id 
-                      ? 'text-green-600' 
-                      : item.roundWinner === opponent.id
-                      ? 'text-red-600'
-                      : 'text-muted-foreground'
-                  }`}>
-                    {item.roundWinner === currentPlayer.id ? '✓ Won' : 
-                     item.roundWinner === opponent.id ? '✗ Lost' : 
-                     '— Tied'}
-                  </span>
-                </div>
-              ))}
+            <h2 className="text-lg font-semibold text-foreground mb-4">Game History</h2>
+            <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+              {gameHistory.map((item, idx) => {
+                const currentPlayerAnswer = item.answers?.find(a => a.playerId === currentPlayer.id);
+                const opponentAnswer = item.answers?.find(a => a.playerId === opponent.id);
+                
+                return (
+                  <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-foreground">Round {item.round}</h3>
+                      <span className={`text-sm font-medium ${
+                        item.roundWinner === currentPlayer.id 
+                          ? 'text-green-600' 
+                          : item.roundWinner === opponent.id
+                          ? 'text-red-600'
+                          : 'text-muted-foreground'
+                      }`}>
+                        {item.roundWinner === currentPlayer.id ? '✓ You Won' : 
+                         item.roundWinner === opponent.id ? `✓ ${opponent.name} Won` : 
+                         '— Draw'}
+                      </span>
+                    </div>
+                    
+                    {/* Question */}
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium">Question:</span> {item.questionText || 'Question not available'}
+                    </div>
+                    
+                    {/* Answers */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{currentPlayer.name}</span>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          currentPlayerAnswer?.answer === 'no_answer' 
+                            ? 'bg-gray-100 text-gray-600' 
+                            : item.roundWinner === currentPlayer.id
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {currentPlayerAnswer?.answer === 'no_answer' ? 'No answer' : currentPlayerAnswer?.answer || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{opponent.name}</span>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          opponentAnswer?.answer === 'no_answer' 
+                            ? 'bg-gray-100 text-gray-600' 
+                            : item.roundWinner === opponent.id
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {opponentAnswer?.answer === 'no_answer' ? 'No answer' : opponentAnswer?.answer || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

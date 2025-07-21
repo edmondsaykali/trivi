@@ -135,7 +135,10 @@ export default function Landing() {
             value={username}
             onChange={(e) => {
               if (e.target.value.length <= 10) {
-                setUsername(e.target.value);
+                const value = e.target.value;
+                // Capitalize first letter
+                const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+                setUsername(capitalizedValue);
               }
             }}
             onKeyDown={(e) => {

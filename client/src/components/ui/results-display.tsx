@@ -18,7 +18,7 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   const currentPlayerAnswer = answers.find(a => a.playerId === currentPlayer.id);
   const opponentAnswer = answers.find(a => a.playerId === opponent.id);
   
-  if (question && question.type === 'multiple_choice') {
+  if (question.type === 'multiple_choice') {
     const correctIndex = typeof question.correct === 'string' 
       ? question.options?.findIndex((opt) => opt === question.correct) ?? -1
       : question.correct;
@@ -61,7 +61,7 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
           {/* Show correct answer - Simple */}
           <div className="text-center">
             <span className="text-sm text-muted-foreground">Correct Answer: </span>
-            <span className="text-sm font-medium text-foreground">{question.options?.[correctIndex] || question.correct}</span>
+            <span className="text-base font-semibold text-foreground">{question.options?.[correctIndex] || question.correct}</span>
           </div>
 
           {/* Round result for Q1 */}
@@ -138,7 +138,7 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
         {/* Show correct answer - Simple */}
         <div className="text-center">
           <span className="text-sm text-muted-foreground">Correct Answer: </span>
-          <span className="text-sm font-medium text-foreground">{correctAnswer}</span>
+          <span className="text-base font-semibold text-foreground">{correctAnswer}</span>
         </div>
 
         {/* Updated scores */}
