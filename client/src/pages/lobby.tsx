@@ -34,27 +34,25 @@ export default function Lobby({ params }: LobbyProps) {
 
   // Check if other player left the lobby
   useEffect(() => {
-    if (gameState && gameState.players.length < 2 && gameState.game.status === 'waiting') {
-      // Only show message if we previously had 2 players AND we're not the first player joining
-      const hadTwoPlayers = sessionStorage.getItem('trivi-had-two-players') === 'true';
-      const isFirstLoad = sessionStorage.getItem('trivi-first-lobby-load') !== 'false';
-      
-      if (hadTwoPlayers && !isFirstLoad) {
-        toast({
-          title: "Player Left",
-          description: "The other player has left the lobby.",
-        });
-        sessionStorage.removeItem('trivi-had-two-players');
-      }
-      
-      // Mark that we've loaded the lobby at least once
-      sessionStorage.setItem('trivi-first-lobby-load', 'false');
-    } else if (gameState && gameState.players.length === 2) {
-      sessionStorage.setItem('trivi-had-two-players', 'true');
+    if (!gameState) return;
+    
+    const lobbyKey = `trivi-lobby-${gameId}`;
+    const previousPlayerCount = parseInt(sessionStorage.getItem(lobbyKey) || '0');
+    const currentPlayerCount = gameState.players.length;
+    
+    // Update stored player count
+    sessionStorage.setItem(lobbyKey, currentPlayerCount.toString());
+    
+    // Only show message if player count decreased (someone left)
+    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting') {
+      toast({
+        title: "Player Left",
+        description: "The other player has left the lobby.",
+      });
     }
-  }, [gameState, toast]);
+  }, [gameState?.players.length, gameState?.game.status, gameId, toast]);
 
-  // Only handle actual browser close/refresh, not navigation within app
+  // Handle leaving the lobby
   useEffect(() => {
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
@@ -63,12 +61,25 @@ export default function Lobby({ params }: LobbyProps) {
       }
     };
 
+    const handleLeavePage = async () => {
+      const sessionId = sessionStorage.getItem('trivi-session');
+      if (sessionId && gameState?.game.status === 'waiting') {
+        try {
+          await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
+        } catch (error) {
+          console.error('Error leaving game:', error);
+        }
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Leave game when component unmounts (navigating away)
+      handleLeavePage();
     };
-  }, [gameId]);
+  }, [gameId, gameState?.game.status]);
 
   const startGame = async () => {
     if (!isCreator) return;

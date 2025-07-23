@@ -97,12 +97,10 @@ export default function Game({ params }: GameProps) {
         title: "Game Ended",
         description: "Your opponent has left the game.",
       });
-      // Redirect to home page
+      // Redirect to home page after 3 seconds
       setTimeout(() => {
-        sessionStorage.removeItem('trivi-session');
-        sessionStorage.removeItem('trivi-game-id');
         setLocation('/');
-      }, 1500);
+      }, 3000);
     }
   }, [gameState, toast, setLocation]);
 

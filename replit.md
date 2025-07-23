@@ -79,6 +79,16 @@ Preferred communication style: Simple, everyday language.
 - Server-side deadline enforcement prevents client manipulation
 - State changes immediately reflected across all connected clients
 
+## Recent Changes (July 24, 2025)
+
+### Player Disconnection & Lobby Fixes (July 24)
+- ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
+- ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave
+- ✅ **IMPROVED: Game disconnection handling** - Shows 3-second message and redirects home when opponent leaves
+- ✅ **FIXED: Timer submission blocking** - Prevents answer submission after deadline
+- ✅ **ENHANCED: Mobile experience** - Disabled tap highlights and pre-selection
+- ✅ **UPDATED: Results display** - Shows elapsed time (e.g., "7s") instead of timestamps
+
 ## Recent Changes (July 21, 2025)
 
 ### UI Minimalism Updates ✅ COMPLETE
