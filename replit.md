@@ -88,6 +88,7 @@ Preferred communication style: Simple, everyday language.
 - ✅ **FIXED: Timer submission blocking** - Prevents answer submission after deadline
 - ✅ **ENHANCED: Mobile experience** - Disabled tap highlights and pre-selection
 - ✅ **UPDATED: Results display** - Shows elapsed time (e.g., "7s") instead of timestamps
+- ✅ **FIXED: "Game not found" error** - Improved error handling and validation for game start
 
 ## Recent Changes (July 21, 2025)
 

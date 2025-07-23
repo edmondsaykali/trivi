@@ -603,18 +603,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start game
   app.post("/api/games/:id/start", async (req, res) => {
     try {
-      const gameId = parseInt(req.params.id);
+      const gameIdStr = req.params.id;
+      const gameId = parseInt(gameIdStr);
+      
+      console.log(`Starting game - raw ID: "${gameIdStr}", parsed: ${gameId}`);
+      
+      if (isNaN(gameId)) {
+        console.error(`Invalid game ID: "${gameIdStr}"`);
+        return res.status(400).json({ message: "Invalid game ID" });
+      }
+      
       const game = await storage.getGameById(gameId);
       
       if (!game) {
+        console.error(`Game ${gameId} not found in database`);
         return res.status(404).json({ message: "Game not found" });
       }
       
+      console.log(`Game ${gameId} status: ${game.status}`);
+      
+      if (game.status !== 'waiting') {
+        return res.status(400).json({ message: "Game already started" });
+      }
+      
       const players = await storage.getPlayersByGameId(gameId);
+      console.log(`Game ${gameId} has ${players.length} players`);
+      
       if (players.length !== 2) {
         return res.status(400).json({ message: "Need 2 players to start" });
       }
       
+      console.log(`Starting question for game ${gameId}`);
       await startQuestion(gameId, 1, 1);
       
       res.json({ success: true });

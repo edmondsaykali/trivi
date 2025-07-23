@@ -86,9 +86,11 @@ export default function Lobby({ params }: LobbyProps) {
     
     setIsStarting(true);
     try {
-      await apiRequest('POST', `/api/games/${gameId}/start`, {});
+      const response = await apiRequest('POST', `/api/games/${gameId}/start`, {});
+      const data = await response.json();
       // No toast needed, game will start
     } catch (error: any) {
+      console.error('Start game error:', error);
       toast({
         variant: "destructive",
         title: "Error",
