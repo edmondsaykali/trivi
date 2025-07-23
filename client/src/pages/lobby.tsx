@@ -19,6 +19,7 @@ export default function Lobby({ params }: LobbyProps) {
   const gameId = parseInt(params.id);
   const { gameState, loading } = useGameState(gameId);
   const [isStarting, setIsStarting] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -28,6 +29,7 @@ export default function Lobby({ params }: LobbyProps) {
 
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
+      setIsTransitioning(true);
       setLocation(`/game/${gameId}`);
     } else if (gameState?.game.status === 'finished') {
       // Don't redirect to results from lobby
@@ -66,8 +68,8 @@ export default function Lobby({ params }: LobbyProps) {
 
     const handleLeavePage = async () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      // Only leave if game is still in waiting status and we're actually leaving the app
-      if (sessionId && gameState?.game.status === 'waiting' && !isStarting) {
+      // Only leave if game is still in waiting status and we're not transitioning
+      if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
         try {
           await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
         } catch (error) {
@@ -81,11 +83,11 @@ export default function Lobby({ params }: LobbyProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       // Only leave game if we're not transitioning to the game page
-      if (gameState?.game.status === 'waiting') {
+      if (gameState?.game.status === 'waiting' && !isTransitioning) {
         handleLeavePage();
       }
     };
-  }, [gameId, gameState?.game.status, isStarting]);
+  }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
 
   const startGame = async () => {
     if (!isCreator) return;

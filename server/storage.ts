@@ -281,9 +281,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
-    const result = await this.db.delete(players)
-      .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
-    return true;
+    // Only remove players from games that haven't started yet
+    const game = await this.getGameById(gameId);
+    if (game && game.status === 'waiting') {
+      const result = await this.db.delete(players)
+        .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
+      return true;
+    }
+    return false;
   }
 
   async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
