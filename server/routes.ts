@@ -811,19 +811,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
       
-      // Remove player from game
-      await storage.removePlayerFromGame(gameId, sessionId);
-      
-      // If game is active and there's a remaining player, they win
-      if (game.status === 'playing' && remainingPlayer) {
+      // Only process leave if game hasn't just started
+      if (game.status === 'waiting') {
+        // Remove player from waiting game
+        await storage.removePlayerFromGame(gameId, sessionId);
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
+      } else if (game.status === 'playing' && remainingPlayer) {
+        // Don't actually remove from database during active game
+        // Just mark game as finished if someone truly left
         await storage.updateGame(gameId, {
           status: 'finished',
           winnerId: remainingPlayer.id
         });
         console.log(`Game ${gameId}: Player ${leavingPlayer.name} left. ${remainingPlayer.name} wins by default.`);
-      } else if (game.status === 'waiting') {
-        // If game is in lobby, just update player count
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
+      } else {
+        console.log(`Game ${gameId}: Ignoring leave request - game status: ${game.status}`);
+        return res.json({ message: "Cannot leave at this time" });
       }
       
       res.json({ message: "Left game successfully" });

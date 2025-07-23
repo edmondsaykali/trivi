@@ -59,14 +59,21 @@ export default function Lobby({ params }: LobbyProps) {
 
   // Handle leaving the lobby
   useEffect(() => {
+    let mounted = true;
+    
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId) {
+      if (sessionId && gameState?.game.status === 'waiting') {
         navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
       }
     };
 
     const handleLeavePage = async () => {
+      // Add delay to ensure game state has updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!mounted) return;
+      
       const sessionId = sessionStorage.getItem('trivi-session');
       // Only leave if game is still in waiting status and we're not transitioning
       if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
@@ -81,9 +88,10 @@ export default function Lobby({ params }: LobbyProps) {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      mounted = false;
       window.removeEventListener('beforeunload', handleBeforeUnload);
       // Only leave game if we're not transitioning to the game page
-      if (gameState?.game.status === 'waiting' && !isTransitioning) {
+      if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
         handleLeavePage();
       }
     };
