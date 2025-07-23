@@ -29,6 +29,9 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
       setLocation(`/game/${gameId}`);
+    } else if (gameState?.game.status === 'finished') {
+      // Don't redirect to results from lobby
+      console.error('Game finished before starting - something went wrong');
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
@@ -63,7 +66,8 @@ export default function Lobby({ params }: LobbyProps) {
 
     const handleLeavePage = async () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && gameState?.game.status === 'waiting') {
+      // Only leave if game is still in waiting status and we're actually leaving the app
+      if (sessionId && gameState?.game.status === 'waiting' && !isStarting) {
         try {
           await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
         } catch (error) {
@@ -76,10 +80,12 @@ export default function Lobby({ params }: LobbyProps) {
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Leave game when component unmounts (navigating away)
-      handleLeavePage();
+      // Only leave game if we're not transitioning to the game page
+      if (gameState?.game.status === 'waiting') {
+        handleLeavePage();
+      }
     };
-  }, [gameId, gameState?.game.status]);
+  }, [gameId, gameState?.game.status, isStarting]);
 
   const startGame = async () => {
     if (!isCreator) return;
