@@ -90,6 +90,12 @@ Preferred communication style: Simple, everyday language.
 - ✅ **UPDATED: Leave game logic** - Players NOT removed immediately during active games, only after inactivity check
 - ✅ **WORKING: Check-opponent API endpoint** - `/api/games/:id/check-opponent` verifies opponent activity and removes inactive players
 
+### Lobby Transition Fixes (July 24 - 6:55 PM)
+- ✅ **FIXED: "Host has closed lobby" false trigger** - Added gameHasStarted flag to prevent lobby cleanup during transitions
+- ✅ **PREVENTED: Race condition cleanup** - Removed cleanup leave calls that were triggering during game start
+- ✅ **ADDED: Server-side transition grace period** - 5-second window to ignore leave requests after game creation
+- ✅ **IMPROVED: Transition timing** - Added delays to ensure state flags are set before navigation
+
 ### Player Disconnection & Lobby Fixes (July 24)
 - ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
 - ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave

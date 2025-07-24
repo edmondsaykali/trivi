@@ -816,8 +816,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle different leave scenarios
       if (game.status === 'waiting') {
-        // If host leaves lobby, close the entire game
-        if (leavingPlayer.id === game.creatorId) {
+        // Check if this might be a transition leave (game just started)
+        // Add a small grace period to avoid closing games that just started
+        const gameAge = new Date().getTime() - new Date(game.createdAt).getTime();
+        const recentStart = gameAge < 5000; // Less than 5 seconds old
+        
+        if (recentStart) {
+          console.log(`Game ${gameId}: Ignoring leave request during game transition (${gameAge}ms old)`);
+          // Don't process leave during transition
+        } else if (leavingPlayer.id === game.creatorId) {
+          // If host leaves lobby, close the entire game
           await storage.updateGame(gameId, {
             status: 'finished'
           });

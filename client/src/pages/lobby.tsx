@@ -20,6 +20,7 @@ export default function Lobby({ params }: LobbyProps) {
   const { gameState, loading } = useGameState(gameId);
   const [isStarting, setIsStarting] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [gameHasStarted, setGameHasStarted] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -29,8 +30,12 @@ export default function Lobby({ params }: LobbyProps) {
 
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
+      setGameHasStarted(true);
       setIsTransitioning(true);
-      setLocation(`/game/${gameId}`);
+      // Add delay to ensure isTransitioning is set before any cleanup
+      setTimeout(() => {
+        setLocation(`/game/${gameId}`);
+      }, 50);
     } else if (gameState?.game.status === 'finished') {
       // Don't redirect to results from lobby
       console.error('Game finished before starting - something went wrong');
@@ -73,15 +78,15 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && gameState?.game.status === 'waiting') {
+      if (sessionId && gameState?.game.status === 'waiting' && !gameHasStarted) {
         navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
       }
     };
 
     const handleLeavePage = async () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      // Only leave if game is still in waiting status and we're not transitioning
-      if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
+      // Only leave if game is still in waiting status and we're not transitioning and game hasn't started
+      if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning && !gameHasStarted) {
         try {
           await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
         } catch (error) {
@@ -94,7 +99,7 @@ export default function Lobby({ params }: LobbyProps) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         const sessionId = sessionStorage.getItem('trivi-session');
-        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
+        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning && !gameHasStarted) {
           navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
         }
       }
@@ -106,12 +111,10 @@ export default function Lobby({ params }: LobbyProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Call leave immediately during cleanup, before any state changes
-      if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
-        handleLeavePage();
-      }
+      // Don't call leave during cleanup to prevent race conditions
+      // Only handle actual page unload via beforeunload event
     };
-  }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
+  }, [gameId, gameState?.game.status, isStarting, isTransitioning, gameHasStarted]);
 
 
 
