@@ -202,8 +202,14 @@ async function processGame(gameId: number) {
   
   console.log(`Game ${gameId} R${currentRound}Q${currentQuestion}: ${answers.length}/2 answers received`);
 
-  if (players.length !== 2) {
-    console.error(`Game ${gameId} needs 2 players, has ${players.length}`);
+  // Check if we still have enough players - if not, end the game
+  if (players.length < 2) {
+    console.log(`Game ${gameId} has ${players.length} players left - ending game`);
+    await storage.updateGame(gameId, {
+      status: 'finished',
+      winnerId: players.length === 1 ? players[0].id : null,
+      waitingForAnswers: false
+    });
     return;
   }
 
@@ -783,6 +789,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error triggering processing:", error);
       res.status(500).json({ message: "Failed to trigger processing" });
+    }
+  });
+
+  // Debug: Reset stuck game state
+  app.post("/api/games/:id/reset", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const game = await storage.getGameById(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      console.log(`Resetting stuck game ${gameId}`);
+      await storage.updateGame(gameId, { waitingForAnswers: false });
+      await processGame(gameId);
+      
+      res.json({ success: true, message: "Game reset and processing triggered" });
+    } catch (error) {
+      console.error("Error resetting game:", error);
+      res.status(500).json({ message: "Failed to reset game" });
     }
   });
 
