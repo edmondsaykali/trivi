@@ -210,6 +210,18 @@ async function processGame(gameId: number) {
   const timeRemaining = game.questionDeadline ? new Date(game.questionDeadline).getTime() - Date.now() : 0;
   const timeIsUp = timeRemaining <= 0;
 
+  // Check if players are still active before processing
+  const playerActivity = await storage.checkPlayersActiveStatus(gameId);
+  
+  if (playerActivity.activeCount < 2) {
+    console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active - ending game`);
+    await storage.updateGame(gameId, {
+      status: 'finished',
+      winnerId: null // No winner due to disconnection
+    });
+    return;
+  }
+
   // Handle timeout - auto-save "no answer" for players who didn't respond
   if (timeIsUp) {
     const playerIds = players.map(p => p.id);

@@ -25,6 +25,7 @@ export const players = pgTable("players", {
   score: integer("score").default(0),
   sessionId: text("session_id").notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastSeen: timestamp("last_seen").defaultNow(),
 });
 
 export const answers = pgTable("answers", {
