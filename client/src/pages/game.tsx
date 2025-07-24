@@ -61,8 +61,15 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     // Only check after we have the current game state
     if (!gameState || gameState.game.status !== 'showing_results') return;
     
+    console.log('Checking player count in results:', {
+      playerCount: gameState.players.length,
+      players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId })),
+      gameStatus: gameState.game.status
+    });
+    
     // Check if we have both players
     if (gameState.players.length < 2) {
+      console.log('Player disconnection detected! Redirecting...');
       toast({
         title: "Game Ended",
         description: "The other player has left the game.",
@@ -123,6 +130,49 @@ export default function Game({ params }: GameProps) {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Handle leaving the game during play
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const sessionId = sessionStorage.getItem('trivi-session');
+      if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
+        navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
+      }
+    };
+
+    const handleLeavePage = async () => {
+      const sessionId = sessionStorage.getItem('trivi-session');
+      if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
+        try {
+          await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
+        } catch (error) {
+          console.error('Error leaving game:', error);
+        }
+      }
+    };
+
+    // Handle visibility change (tab switching, minimizing)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const sessionId = sessionStorage.getItem('trivi-session');
+        if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
+          navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Call leave immediately during cleanup
+      if (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results') {
+        handleLeavePage();
+      }
+    };
+  }, [gameId, gameState?.game.status]);
 
   useEffect(() => {
     // Reset answer state when question changes
