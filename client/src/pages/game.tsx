@@ -81,6 +81,14 @@ export default function Game({ params }: GameProps) {
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
   const opponent = gameState?.players.find(p => p.sessionId !== sessionId);
   
+  // Mark that we're in the game to prevent lobby cleanup
+  useEffect(() => {
+    sessionStorage.setItem('trivi-in-game', 'true');
+    return () => {
+      sessionStorage.removeItem('trivi-in-game');
+    };
+  }, []);
+  
   // Debug logging
   if (gameState && !currentPlayer && sessionId) {
     console.error('Session mismatch:', {
