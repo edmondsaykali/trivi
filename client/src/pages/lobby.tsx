@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 
@@ -22,6 +22,13 @@ export default function Lobby({ params }: LobbyProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const sessionId = sessionStorage.getItem('trivi-session');
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
@@ -92,7 +99,8 @@ export default function Lobby({ params }: LobbyProps) {
     const handleLeavePage = async () => {
       // Check if we're transitioning
       const transitioning = sessionStorage.getItem('trivi-transitioning');
-      if (transitioning) return;
+      const inGame = sessionStorage.getItem('trivi-in-game');
+      if (transitioning || inGame || !isMountedRef.current) return;
       
       const sessionId = sessionStorage.getItem('trivi-session');
       // Only leave if game is still in waiting status
@@ -155,19 +163,24 @@ export default function Lobby({ params }: LobbyProps) {
     if (!isCreator) return;
     
     setIsStarting(true);
+    setIsTransitioning(true);
+    sessionStorage.setItem('trivi-transitioning', 'true');
+    
     try {
       const response = await apiRequest('POST', `/api/games/${gameId}/start`, {});
       const data = await response.json();
       // No toast needed, game will start
+      // Don't reset flags here - let navigation handle it
     } catch (error: any) {
       console.error('Start game error:', error);
+      setIsStarting(false);
+      setIsTransitioning(false);
+      sessionStorage.removeItem('trivi-transitioning');
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to start game.",
       });
-    } finally {
-      setIsStarting(false);
     }
   };
 
