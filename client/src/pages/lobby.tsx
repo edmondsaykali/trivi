@@ -139,11 +139,11 @@ export default function Lobby({ params }: LobbyProps) {
     return null; // Don't show loading screen
   }
 
-  if (!gameState) {
+  if (!gameState || gameState.game.status === 'finished') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Game not found</p>
+          <p className="text-muted-foreground">Game not found or has ended</p>
           <Button 
             onClick={() => setLocation('/')}
             className="mt-4"

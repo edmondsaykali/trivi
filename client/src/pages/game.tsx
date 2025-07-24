@@ -107,12 +107,47 @@ export default function Game({ params }: GameProps) {
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
   const opponent = gameState?.players.find(p => p.sessionId !== sessionId);
   
-  // Debug logging
-  if (gameState && !currentPlayer && sessionId) {
+  // Handle session mismatch or game finished
+  if (gameState && gameState.game.status === 'finished') {
+    console.log('Game finished before starting - something went wrong');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-foreground mb-4">Game Ended</h2>
+          <p className="text-muted-foreground mb-4">This game has finished.</p>
+          <button 
+            onClick={() => setLocation('/')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Handle session mismatch - player was removed from game
+  if (gameState && !currentPlayer && sessionId && gameState.players.length === 0) {
     console.error('Session mismatch:', {
       sessionId,
       players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId }))
     });
+    
+    // If we can't find our session and there are no players, game likely ended
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-foreground mb-4">Game Ended</h2>
+          <p className="text-muted-foreground mb-4">You have been disconnected from the game.</p>
+          <button 
+            onClick={() => setLocation('/')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
   useEffect(() => {
