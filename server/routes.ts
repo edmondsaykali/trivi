@@ -813,6 +813,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Leave request - Game ${gameId} status: ${game.status}, Player: ${leavingPlayer.name}`);
       
+      // CRITICAL FIX: If game was just started, ignore leave requests for 5 seconds
+      if (game.status === 'playing' && game.questionDeadline) {
+        const gameStartTime = new Date(game.questionDeadline).getTime() - 15000; // Question starts 15s before deadline
+        const timeSinceStart = Date.now() - gameStartTime;
+        
+        if (timeSinceStart < 5000) { // Less than 5 seconds since game started
+          console.log(`Game ${gameId}: Ignoring leave request from ${leavingPlayer.name} - game just started (${timeSinceStart}ms ago)`);
+          return res.json({ message: "Leave request ignored - game just started" });
+        }
+      }
+      
       // Handle different leave scenarios
       if (game.status === 'waiting') {
         // If host leaves lobby, close the entire game

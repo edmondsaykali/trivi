@@ -36,13 +36,13 @@ export default function Lobby({ params }: LobbyProps) {
 
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
+      console.log('Game started - transitioning to game page');
       setIsTransitioning(true);
-      // Set a flag to prevent leave requests
+      // Set multiple flags to prevent leave requests
       sessionStorage.setItem('trivi-transitioning', 'true');
-      // Add a small delay to ensure state is updated before navigation
-      setTimeout(() => {
-        setLocation(`/game/${gameId}`);
-      }, 100);
+      sessionStorage.setItem('trivi-in-game', 'true');
+      // Immediate navigation without delay
+      setLocation(`/game/${gameId}`);
     } else if (gameState?.game.status === 'finished') {
       // Don't redirect to results from lobby
       console.error('Game finished before starting - something went wrong');
@@ -87,10 +87,16 @@ export default function Lobby({ params }: LobbyProps) {
     if (isTransitioning || isStarting) return;
 
     const handleBeforeUnload = () => {
+      // Check multiple conditions before sending leave
+      const transitioning = sessionStorage.getItem('trivi-transitioning');
+      const inGame = sessionStorage.getItem('trivi-in-game');
+      if (transitioning || inGame || !isMountedRef.current) return;
+      
       // Only send leave if game is still waiting
       if (gameState?.game.status === 'waiting') {
         const sessionId = sessionStorage.getItem('trivi-session');
         if (sessionId) {
+          console.log('Sending beforeunload leave request');
           navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
         }
       }
@@ -100,12 +106,16 @@ export default function Lobby({ params }: LobbyProps) {
       // Check if we're transitioning
       const transitioning = sessionStorage.getItem('trivi-transitioning');
       const inGame = sessionStorage.getItem('trivi-in-game');
-      if (transitioning || inGame || !isMountedRef.current) return;
+      if (transitioning || inGame || !isMountedRef.current) {
+        console.log('Skipping leave - transitioning/inGame/unmounted');
+        return;
+      }
       
       const sessionId = sessionStorage.getItem('trivi-session');
       // Only leave if game is still in waiting status
       if (sessionId && gameState?.game.status === 'waiting') {
         try {
+          console.log('Sending cleanup leave request');
           await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
         } catch (error) {
           console.error('Error leaving game:', error);
@@ -115,10 +125,16 @@ export default function Lobby({ params }: LobbyProps) {
 
     // Handle visibility change (tab switching, minimizing)
     const handleVisibilityChange = () => {
+      // Check multiple conditions
+      const transitioning = sessionStorage.getItem('trivi-transitioning');
+      const inGame = sessionStorage.getItem('trivi-in-game');
+      if (transitioning || inGame || !isMountedRef.current) return;
+      
       // Don't send leave if the game has started
       if (document.hidden && gameState?.game.status === 'waiting') {
         const sessionId = sessionStorage.getItem('trivi-session');
         if (sessionId) {
+          console.log('Sending visibility change leave request');
           navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
         }
       }
@@ -132,15 +148,19 @@ export default function Lobby({ params }: LobbyProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       // Don't call leave if we're transitioning
       const transitioning = sessionStorage.getItem('trivi-transitioning');
-      if (!transitioning && !isTransitioning && !isStarting && gameState?.game.status === 'waiting') {
+      const inGame = sessionStorage.getItem('trivi-in-game');
+      console.log('Cleanup running - transitioning:', !!transitioning, 'inGame:', !!inGame, 'isTransitioning:', isTransitioning, 'isStarting:', isStarting);
+      if (!transitioning && !inGame && !isTransitioning && !isStarting && gameState?.game.status === 'waiting') {
         handleLeavePage();
+      } else {
+        console.log('Skipping cleanup leave request');
       }
     };
   }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
 
   // Send heartbeat to server
   useEffect(() => {
-    if (!sessionId || gameState?.game.status !== 'waiting') return;
+    if (!sessionId || gameState?.game.status !== 'waiting' || isTransitioning || isStarting) return;
 
     const sendHeartbeat = async () => {
       try {
@@ -157,7 +177,7 @@ export default function Lobby({ params }: LobbyProps) {
     const interval = setInterval(sendHeartbeat, 5000);
 
     return () => clearInterval(interval);
-  }, [gameId, sessionId, gameState?.game.status]);
+  }, [gameId, sessionId, gameState?.game.status, isTransitioning, isStarting]);
 
   const startGame = async () => {
     if (!isCreator) return;
