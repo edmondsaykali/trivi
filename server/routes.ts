@@ -736,9 +736,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already answered" });
       }
       
-      // Update player's lastSeenAt when they submit an answer
-      await storage.updatePlayerLastSeen(sessionId);
-      
       const answerRecord = await storage.createAnswer({
         gameId,
         playerId: player.id,
@@ -816,16 +813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle different leave scenarios
       if (game.status === 'waiting') {
-        // Check if this might be a transition leave (game just started)
-        // Add a small grace period to avoid closing games that just started
-        const gameAge = new Date().getTime() - new Date(game.createdAt).getTime();
-        const recentStart = gameAge < 5000; // Less than 5 seconds old
-        
-        if (recentStart) {
-          console.log(`Game ${gameId}: Ignoring leave request during game transition (${gameAge}ms old)`);
-          // Don't process leave during transition
-        } else if (leavingPlayer.id === game.creatorId) {
-          // If host leaves lobby, close the entire game
+        // If host leaves lobby, close the entire game
+        if (leavingPlayer.id === game.creatorId) {
           await storage.updateGame(gameId, {
             status: 'finished'
           });
@@ -836,9 +825,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
       } else if (game.status === 'playing' || game.status === 'showing_results') {
-        // During active game, don't remove the player immediately
-        // Just log it - the check-opponent endpoint will handle disconnection detection
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game (not removing yet).`);
+        // During active game, remove the player
+        // The game will detect this after showing results
+        await storage.removePlayerFromGame(gameId, sessionId);
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game.`);
       }
       
       res.json({ message: "Left game successfully" });
@@ -850,71 +840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Check opponent activity
-  app.post("/api/games/:id/check-opponent", async (req, res) => {
-    try {
-      const gameId = parseInt(req.params.id);
-      const { sessionId } = req.body;
-      
-      if (!sessionId) {
-        return res.status(400).json({ message: "Session ID required" });
-      }
-      
-      // Update current player's lastSeenAt
-      await storage.updatePlayerLastSeen(sessionId);
-      
-      // Get all players
-      const players = await storage.getPlayersByGameId(gameId);
-      const currentPlayer = players.find(p => p.sessionId === sessionId);
-      const opponent = players.find(p => p.sessionId !== sessionId);
-      
-      if (!currentPlayer) {
-        return res.status(403).json({ message: "Not in this game" });
-      }
-      
-      // If no opponent, they've already left
-      if (!opponent) {
-        return res.json({ isOpponentActive: false });
-      }
-      
-      // Check if opponent is still active
-      const now = new Date().getTime();
-      const lastSeen = new Date(opponent.lastSeenAt).getTime();
-      const thirtySecondsAgo = now - 30000; // 30 seconds
-      
-      const isOpponentActive = lastSeen > thirtySecondsAgo;
-      
-      // If opponent is inactive, remove them from the game
-      if (!isOpponentActive) {
-        await storage.removePlayerFromGame(gameId, opponent.sessionId);
-        console.log(`Game ${gameId}: Removed inactive player ${opponent.name} after checking activity`);
-      }
-      
-      res.json({ isOpponentActive });
-    } catch (error) {
-      console.error("Error checking opponent activity:", error);
-      res.status(500).json({ message: "Failed to check opponent activity" });
-    }
-  });
-
-  // Update player activity
-  app.post("/api/players/:sessionId/activity", async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      if (!sessionId) {
-        return res.status(400).json({ message: "Session ID required" });
-      }
-      
-      await storage.updatePlayerLastSeen(sessionId);
-      res.json({ message: "Activity updated" });
-    } catch (error) {
-      console.error("Error updating player activity:", error);
-      res.status(500).json({ message: "Failed to update activity" });
-    }
-  });
-
-  // Get game state with inactive player cleanup
+  // Get game state
   app.get("/api/games/:id", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
@@ -922,34 +848,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
-      }
-      
-      // Clean up inactive players in waiting lobbies
-      if (game.status === 'waiting') {
-        const players = await storage.getPlayersByGameId(gameId);
-        const now = new Date().getTime();
-        const thirtySecondsAgo = now - 30000; // 30 seconds
-        
-        for (const player of players) {
-          const lastSeen = new Date(player.lastSeenAt).getTime();
-          if (lastSeen < thirtySecondsAgo) {
-            // Remove inactive player, but don't close lobby if it's the host
-            if (player.id === game.creatorId) {
-              // Host is inactive, close the lobby
-              await storage.updateGame(gameId, { status: 'finished' });
-              console.log(`Game ${gameId}: Closed lobby due to inactive host ${player.name}`);
-              return res.json({ 
-                game: { ...game, status: 'finished' }, 
-                players: [], 
-                rounds: [] 
-              });
-            } else {
-              // Non-host player is inactive, just remove them
-              await storage.removePlayerFromGame(gameId, player.sessionId);
-              console.log(`Game ${gameId}: Removed inactive player ${player.name} from lobby`);
-            }
-          }
-        }
       }
       
       const players = await storage.getPlayersByGameId(gameId);

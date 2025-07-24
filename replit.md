@@ -81,28 +81,6 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 24, 2025)
 
-### Simplified Disconnection System (July 24 - 6:45 PM)
-- ✅ **IMPLEMENTED: lastSeenAt-based presence tracking** - Each player has lastSeenAt timestamp updated on interactions
-- ✅ **REMOVED: Complex real-time disconnection checks** - No more heartbeat, timers, or continuous monitoring
-- ✅ **ADDED: Post-results opponent check** - Single check after each question's results to verify opponent is active
-- ✅ **SIMPLIFIED: Disconnection threshold** - 30-second window to determine if player is still active
-- ✅ **FIXED: "Access Denied" bug** - Players no longer removed during lobby→game transitions
-- ✅ **UPDATED: Leave game logic** - Players NOT removed immediately during active games, only after inactivity check
-- ✅ **WORKING: Check-opponent API endpoint** - `/api/games/:id/check-opponent` verifies opponent activity and removes inactive players
-
-### Lobby Transition Fixes (July 24 - 6:55 PM)
-- ✅ **FIXED: "Host has closed lobby" false trigger** - Added gameHasStarted flag to prevent lobby cleanup during transitions
-- ✅ **PREVENTED: Race condition cleanup** - Removed cleanup leave calls that were triggering during game start
-- ✅ **ADDED: Server-side transition grace period** - 5-second window to ignore leave requests after game creation
-- ✅ **IMPROVED: Transition timing** - Added delays to ensure state flags are set before navigation
-
-### Lobby Disconnection Detection (July 24 - 7:05 PM)
-- ✅ **IMPLEMENTED: Automatic inactive player cleanup** - Server removes players who haven't been active for 30+ seconds
-- ✅ **ADDED: Client-side activity heartbeat** - Players send activity updates every 5 seconds while in lobby
-- ✅ **ENHANCED: Lobby spot management** - Inactive players automatically removed, spots opened for new players
-- ✅ **IMPROVED: Host abandonment handling** - Lobby closes if host becomes inactive for 30+ seconds
-- ✅ **WORKING: Real-time cleanup on game state requests** - Cleanup happens during normal game state polling
-
 ### Player Disconnection & Lobby Fixes (July 24)
 - ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
 - ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave

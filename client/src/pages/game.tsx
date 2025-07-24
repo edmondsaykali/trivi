@@ -56,39 +56,22 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     fetchAnswers();
   }, [game.id, game.currentRound, game.currentQuestion]);
   
-  // Check opponent activity after showing results
+  // Check if both players are still connected after showing results
   useEffect(() => {
-    // Only check when we're showing results
+    // Only check after we have the current game state
     if (!gameState || gameState.game.status !== 'showing_results') return;
     
-    const checkOpponent = async () => {
-      try {
-        const sessionId = sessionStorage.getItem('trivi-session');
-        const response = await apiRequest('POST', `/api/games/${game.id}/check-opponent`, {
-          sessionId
-        });
-        
-        const data = await response.json();
-        console.log('Opponent activity check:', data);
-        
-        if (!data.isOpponentActive) {
-          toast({
-            title: "Game Ended",
-            description: "The other player has left the game.",
-          });
-          setTimeout(() => {
-            setLocation('/');
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('Failed to check opponent activity:', error);
-      }
-    };
-    
-    // Check after a short delay to ensure results are shown
-    const timer = setTimeout(checkOpponent, 1000);
-    return () => clearTimeout(timer);
-  }, [gameState?.game.status, game.id, toast, setLocation]);
+    // Check if we have both players
+    if (gameState.players.length < 2) {
+      toast({
+        title: "Game Ended",
+        description: "The other player has left the game.",
+      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 1500);
+    }
+  }, [gameState, toast, setLocation]);
   
   // Use the ResultsDisplay component
   return (
@@ -117,18 +100,13 @@ export default function Game({ params }: GameProps) {
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
   const opponent = gameState?.players.find(p => p.sessionId !== sessionId);
   
-  // Debug logging - always log to help debug
-  useEffect(() => {
-    if (gameState) {
-      console.log('Game state check:', {
-        sessionId,
-        hasSessionId: !!sessionId,
-        players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId })),
-        currentPlayer: currentPlayer ? { id: currentPlayer.id, name: currentPlayer.name } : null,
-        gameStatus: gameState.game.status
-      });
-    }
-  }, [gameState, sessionId, currentPlayer]);
+  // Debug logging
+  if (gameState && !currentPlayer && sessionId) {
+    console.error('Session mismatch:', {
+      sessionId,
+      players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId }))
+    });
+  }
 
   useEffect(() => {
     if (gameState?.game.status === 'finished') {

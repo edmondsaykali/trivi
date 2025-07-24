@@ -20,7 +20,6 @@ export default function Lobby({ params }: LobbyProps) {
   const { gameState, loading } = useGameState(gameId);
   const [isStarting, setIsStarting] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [gameHasStarted, setGameHasStarted] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -30,12 +29,8 @@ export default function Lobby({ params }: LobbyProps) {
 
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
-      setGameHasStarted(true);
       setIsTransitioning(true);
-      // Add delay to ensure isTransitioning is set before any cleanup
-      setTimeout(() => {
-        setLocation(`/game/${gameId}`);
-      }, 50);
+      setLocation(`/game/${gameId}`);
     } else if (gameState?.game.status === 'finished') {
       // Don't redirect to results from lobby
       console.error('Game finished before starting - something went wrong');
@@ -74,41 +69,19 @@ export default function Lobby({ params }: LobbyProps) {
     }
   }, [gameState?.players.length, gameState?.game.status, gameId, toast, isCreator, isStarting, isTransitioning, setLocation]);
 
-  // Update player activity in lobby
-  useEffect(() => {
-    if (!gameState || gameState.game.status !== 'waiting' || !sessionId) return;
-    
-    const updateActivity = async () => {
-      try {
-        await fetch(`/api/players/${sessionId}/activity`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-      } catch (error) {
-        console.error('Failed to update player activity:', error);
-      }
-    };
-    
-    // Update activity immediately and then every 5 seconds
-    updateActivity();
-    const interval = setInterval(updateActivity, 5000);
-    
-    return () => clearInterval(interval);
-  }, [gameState?.game.status, sessionId]);
-
   // Handle leaving the lobby
   useEffect(() => {
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && gameState?.game.status === 'waiting' && !gameHasStarted) {
+      if (sessionId && gameState?.game.status === 'waiting') {
         navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
       }
     };
 
     const handleLeavePage = async () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      // Only leave if game is still in waiting status and we're not transitioning and game hasn't started
-      if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning && !gameHasStarted) {
+      // Only leave if game is still in waiting status and we're not transitioning
+      if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
         try {
           await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
         } catch (error) {
@@ -121,7 +94,7 @@ export default function Lobby({ params }: LobbyProps) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         const sessionId = sessionStorage.getItem('trivi-session');
-        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning && !gameHasStarted) {
+        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
           navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
         }
       }
@@ -133,10 +106,12 @@ export default function Lobby({ params }: LobbyProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Don't call leave during cleanup to prevent race conditions
-      // Only handle actual page unload via beforeunload event
+      // Call leave immediately during cleanup, before any state changes
+      if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
+        handleLeavePage();
+      }
     };
-  }, [gameId, gameState?.game.status, isStarting, isTransitioning, gameHasStarted]);
+  }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
 
 
 
