@@ -98,19 +98,20 @@ export default function Game({ params }: GameProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
-  // Check if opponent dropped out during game
+  // Check if game ended (someone left)
   useEffect(() => {
-    if (gameState && gameState.players.length < 2 && gameState.game.status === 'playing') {
+    // Only show message if game finished unexpectedly (not through normal completion)
+    if (gameState && gameState.game.status === 'finished' && !gameState.game.winnerId && gameState.game.currentRound < 5) {
       toast({
         title: "Game Ended",
-        description: "Your opponent has left the game.",
+        description: "The other player has left the game.",
       });
       // Redirect to home page after 3 seconds
       setTimeout(() => {
         setLocation('/');
       }, 3000);
     }
-  }, [gameState, toast, setLocation]);
+  }, [gameState?.game.status, gameState?.game.winnerId, gameState?.game.currentRound, toast, setLocation]);
 
   // Scroll to top on component mount  
   useEffect(() => {

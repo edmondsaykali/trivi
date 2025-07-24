@@ -37,9 +37,21 @@ export default function Lobby({ params }: LobbyProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
-  // Check if other player left the lobby
+  // Check if game was closed or player left
   useEffect(() => {
     if (!gameState) return;
+    
+    // If game finished while in lobby, host must have left
+    if (gameState.game.status === 'finished' && !isStarting && !isTransitioning) {
+      toast({
+        title: "Lobby Closed",
+        description: "The host has closed this lobby.",
+      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 2000);
+      return;
+    }
     
     const lobbyKey = `trivi-lobby-${gameId}`;
     const previousPlayerCount = parseInt(sessionStorage.getItem(lobbyKey) || '0');
@@ -48,14 +60,14 @@ export default function Lobby({ params }: LobbyProps) {
     // Update stored player count
     sessionStorage.setItem(lobbyKey, currentPlayerCount.toString());
     
-    // Only show message if player count decreased (someone left)
-    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting') {
+    // Only show message if player count decreased (someone left) and we're the host
+    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator) {
       toast({
         title: "Player Left",
         description: "The other player has left the lobby.",
       });
     }
-  }, [gameState?.players.length, gameState?.game.status, gameId, toast]);
+  }, [gameState?.players.length, gameState?.game.status, gameId, toast, isCreator, isStarting, isTransitioning, setLocation]);
 
   // Handle leaving the lobby
   useEffect(() => {

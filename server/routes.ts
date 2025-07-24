@@ -811,22 +811,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
       
-      // Only process leave if game hasn't just started
+      // Handle different leave scenarios
       if (game.status === 'waiting') {
-        // Remove player from waiting game
-        await storage.removePlayerFromGame(gameId, sessionId);
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
-      } else if (game.status === 'playing' && remainingPlayer) {
-        // Don't actually remove from database during active game
-        // Just mark game as finished if someone truly left
+        // If host leaves lobby, close the entire game
+        if (leavingPlayer.id === game.creatorId) {
+          await storage.updateGame(gameId, {
+            status: 'finished'
+          });
+          console.log(`Game ${gameId}: Host ${leavingPlayer.name} left. Lobby closed.`);
+        } else {
+          // Non-host player leaves lobby - just remove them
+          await storage.removePlayerFromGame(gameId, sessionId);
+          console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
+        }
+      } else if (game.status === 'playing') {
+        // During active game, end the game immediately
         await storage.updateGame(gameId, {
           status: 'finished',
-          winnerId: remainingPlayer.id
+          winnerId: remainingPlayer?.id || null
         });
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left. ${remainingPlayer.name} wins by default.`);
-      } else {
-        console.log(`Game ${gameId}: Ignoring leave request - game status: ${game.status}`);
-        return res.json({ message: "Cannot leave at this time" });
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game. Game ended.`);
       }
       
       res.json({ message: "Left game successfully" });
