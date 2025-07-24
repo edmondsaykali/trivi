@@ -90,13 +90,6 @@ Preferred communication style: Simple, everyday language.
 - ✅ **UPDATED: Results display** - Shows elapsed time (e.g., "7s") instead of timestamps
 - ✅ **FIXED: "Game not found" error** - Improved error handling and validation for game start
 
-### Mid-Game Disconnection System (July 24 - Latest)
-- ✅ **FIXED: Access Denied after player leaves** - Game properly ends when player count drops below 2
-- ✅ **ENHANCED: Player removal during gameplay** - Players can leave during active games  
-- ✅ **IMPROVED: Game state management** - Server detects disconnections and ends games gracefully
-- ✅ **ADDED: Debug logging** - Client-side logging for disconnection detection in results phase
-- ✅ **STREAMLINED: Leave handlers** - Unified leave handling for lobby and game states
-
 ## Recent Changes (July 21, 2025)
 
 ### UI Minimalism Updates ✅ COMPLETE

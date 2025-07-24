@@ -61,15 +61,8 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     // Only check after we have the current game state
     if (!gameState || gameState.game.status !== 'showing_results') return;
     
-    console.log('Checking player count in results:', {
-      playerCount: gameState.players.length,
-      players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId })),
-      gameStatus: gameState.game.status
-    });
-    
     // Check if we have both players
     if (gameState.players.length < 2) {
-      console.log('Player disconnection detected! Redirecting...');
       toast({
         title: "Game Ended",
         description: "The other player has left the game.",
@@ -107,47 +100,12 @@ export default function Game({ params }: GameProps) {
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
   const opponent = gameState?.players.find(p => p.sessionId !== sessionId);
   
-  // Handle session mismatch or game finished
-  if (gameState && gameState.game.status === 'finished') {
-    console.log('Game finished before starting - something went wrong');
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-foreground mb-4">Game Ended</h2>
-          <p className="text-muted-foreground mb-4">This game has finished.</p>
-          <button 
-            onClick={() => setLocation('/')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  // Handle session mismatch - player was removed from game
-  if (gameState && !currentPlayer && sessionId && gameState.players.length === 0) {
+  // Debug logging
+  if (gameState && !currentPlayer && sessionId) {
     console.error('Session mismatch:', {
       sessionId,
       players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId }))
     });
-    
-    // If we can't find our session and there are no players, game likely ended
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-foreground mb-4">Game Ended</h2>
-          <p className="text-muted-foreground mb-4">You have been disconnected from the game.</p>
-          <button 
-            onClick={() => setLocation('/')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    );
   }
 
   useEffect(() => {
@@ -165,49 +123,6 @@ export default function Game({ params }: GameProps) {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  // Handle leaving the game during play
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
-        navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
-      }
-    };
-
-    const handleLeavePage = async () => {
-      const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
-        try {
-          await apiRequest('POST', `/api/games/${gameId}/leave`, { sessionId });
-        } catch (error) {
-          console.error('Error leaving game:', error);
-        }
-      }
-    };
-
-    // Handle visibility change (tab switching, minimizing)
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        const sessionId = sessionStorage.getItem('trivi-session');
-        if (sessionId && (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results')) {
-          navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Call leave immediately during cleanup
-      if (gameState?.game.status === 'playing' || gameState?.game.status === 'showing_results') {
-        handleLeavePage();
-      }
-    };
-  }, [gameId, gameState?.game.status]);
 
   useEffect(() => {
     // Reset answer state when question changes
