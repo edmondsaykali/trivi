@@ -811,6 +811,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
       
+      console.log(`Leave request - Game ${gameId} status: ${game.status}, Player: ${leavingPlayer.name}`);
+      
       // Handle different leave scenarios
       if (game.status === 'waiting') {
         // If host leaves lobby, close the entire game
@@ -824,13 +826,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.removePlayerFromGame(gameId, sessionId);
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
-      } else if (game.status === 'playing') {
+      } else if (game.status === 'playing' || game.status === 'showing_results') {
         // During active game, end the game immediately without winner
         await storage.updateGame(gameId, {
           status: 'finished',
           winnerId: null // Important: null winnerId indicates disconnection, not normal win
         });
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game. Game ended.`);
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game (status: ${game.status}). Game ended.`);
+      } else {
+        console.log(`Game ${gameId}: Leave request ignored - game status is ${game.status}`);
       }
       
       res.json({ message: "Left game successfully" });

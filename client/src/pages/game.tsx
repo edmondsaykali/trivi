@@ -84,6 +84,7 @@ export default function Game({ params }: GameProps) {
   // Mark that we're in the game to prevent lobby cleanup
   useEffect(() => {
     sessionStorage.setItem('trivi-in-game', 'true');
+    sessionStorage.removeItem('trivi-transitioning');
     return () => {
       sessionStorage.removeItem('trivi-in-game');
     };
