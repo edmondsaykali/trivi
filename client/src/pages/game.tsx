@@ -100,8 +100,8 @@ export default function Game({ params }: GameProps) {
 
   // Check if game ended (someone left)
   useEffect(() => {
-    // Only show message if game finished unexpectedly (not through normal completion)
-    if (gameState && gameState.game.status === 'finished' && !gameState.game.winnerId && gameState.game.currentRound < 5) {
+    // Show message if game finished with no winner (indicates disconnection)
+    if (gameState && gameState.game.status === 'finished' && gameState.game.winnerId === null) {
       toast({
         title: "Game Ended",
         description: "The other player has left the game.",
@@ -111,7 +111,29 @@ export default function Game({ params }: GameProps) {
         setLocation('/');
       }, 3000);
     }
-  }, [gameState?.game.status, gameState?.game.winnerId, gameState?.game.currentRound, toast, setLocation]);
+  }, [gameState?.game.status, gameState?.game.winnerId, toast, setLocation]);
+
+  // Send heartbeat during game
+  useEffect(() => {
+    const sessionId = sessionStorage.getItem('trivi-session');
+    if (!sessionId || gameState?.game.status !== 'playing') return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await apiRequest('POST', `/api/games/${gameId}/heartbeat`, { sessionId });
+      } catch (error) {
+        console.error('Game heartbeat error:', error);
+      }
+    };
+
+    // Send initial heartbeat
+    sendHeartbeat();
+
+    // Send heartbeat every 5 seconds
+    const interval = setInterval(sendHeartbeat, 5000);
+
+    return () => clearInterval(interval);
+  }, [gameId, gameState?.game.status]);
 
   // Scroll to top on component mount  
   useEffect(() => {

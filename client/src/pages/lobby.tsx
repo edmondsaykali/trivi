@@ -71,8 +71,6 @@ export default function Lobby({ params }: LobbyProps) {
 
   // Handle leaving the lobby
   useEffect(() => {
-    let mounted = true;
-    
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
       if (sessionId && gameState?.game.status === 'waiting') {
@@ -81,11 +79,6 @@ export default function Lobby({ params }: LobbyProps) {
     };
 
     const handleLeavePage = async () => {
-      // Add delay to ensure game state has updated
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      if (!mounted) return;
-      
       const sessionId = sessionStorage.getItem('trivi-session');
       // Only leave if game is still in waiting status and we're not transitioning
       if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
@@ -97,17 +90,49 @@ export default function Lobby({ params }: LobbyProps) {
       }
     };
 
+    // Handle visibility change (tab switching, minimizing)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const sessionId = sessionStorage.getItem('trivi-session');
+        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
+          navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
+        }
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      mounted = false;
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Only leave game if we're not transitioning to the game page
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Call leave immediately during cleanup, before any state changes
       if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
         handleLeavePage();
       }
     };
   }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
+
+  // Send heartbeat to server
+  useEffect(() => {
+    if (!sessionId || gameState?.game.status !== 'waiting') return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await apiRequest('POST', `/api/games/${gameId}/heartbeat`, { sessionId });
+      } catch (error) {
+        console.error('Heartbeat error:', error);
+      }
+    };
+
+    // Send initial heartbeat
+    sendHeartbeat();
+
+    // Send heartbeat every 5 seconds
+    const interval = setInterval(sendHeartbeat, 5000);
+
+    return () => clearInterval(interval);
+  }, [gameId, sessionId, gameState?.game.status]);
 
   const startGame = async () => {
     if (!isCreator) return;

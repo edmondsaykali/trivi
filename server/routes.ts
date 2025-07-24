@@ -825,10 +825,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
       } else if (game.status === 'playing') {
-        // During active game, end the game immediately
+        // During active game, end the game immediately without winner
         await storage.updateGame(gameId, {
           status: 'finished',
-          winnerId: remainingPlayer?.id || null
+          winnerId: null // Important: null winnerId indicates disconnection, not normal win
         });
         console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game. Game ended.`);
       }

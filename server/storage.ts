@@ -18,6 +18,7 @@ export interface IStorage {
   updatePlayerScore(id: number, score: number): Promise<Player | undefined>;
   removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean>;
   updatePlayerHeartbeat(sessionId: string): Promise<boolean>;
+  cleanupStalePlayers(): Promise<void>;
   
   // Answers
   createAnswer(answer: InsertAnswer): Promise<Answer>;
@@ -139,6 +140,11 @@ export class MemStorage implements IStorage {
   async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
     // For in-memory storage, just return true - no persistence needed
     return true;
+  }
+
+  async cleanupStalePlayers(): Promise<void> {
+    // In-memory storage doesn't need cleanup
+    return;
   }
 
   // Answers
@@ -295,6 +301,11 @@ export class DatabaseStorage implements IStorage {
     // For now, just return true as we don't track heartbeats in the database yet
     // In a production app, you'd have a lastSeen timestamp field
     return true;
+  }
+
+  async cleanupStalePlayers(): Promise<void> {
+    // Database storage doesn't need cleanup in this implementation
+    return;
   }
 
   // Answers
