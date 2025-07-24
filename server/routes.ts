@@ -210,8 +210,6 @@ async function processGame(gameId: number) {
   const timeRemaining = game.questionDeadline ? new Date(game.questionDeadline).getTime() - Date.now() : 0;
   const timeIsUp = timeRemaining <= 0;
 
-  // Don't check player activity during initial processing - only check after showing results
-
   // Handle timeout - auto-save "no answer" for players who didn't respond
   if (timeIsUp) {
     const playerIds = players.map(p => p.id);
@@ -288,18 +286,6 @@ async function processGame(gameId: number) {
     
     // Show results for 3 seconds, then move to Q2
     setTimeout(async () => {
-      // Check if players are still active after showing Q1 results
-      const playerActivity = await storage.checkPlayersActiveStatus(gameId);
-      
-      if (playerActivity.activeCount < 2) {
-        console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active after Q1 - ending game`);
-        await storage.updateGame(gameId, {
-          status: 'finished',
-          winnerId: null // No winner due to disconnection
-        });
-        return;
-      }
-      
       // Start Q2 with pre-loaded data
       const deadline = new Date(Date.now() + 15000);
       await storage.updateGame(gameId, {
@@ -329,18 +315,6 @@ async function processGame(gameId: number) {
     
     // Show results for 3 seconds, then complete round
     setTimeout(async () => {
-      // Check if players are still active after showing results
-      const playerActivity = await storage.checkPlayersActiveStatus(gameId);
-      
-      if (playerActivity.activeCount < 2) {
-        console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active after results - ending game`);
-        await storage.updateGame(gameId, {
-          status: 'finished',
-          winnerId: null // No winner due to disconnection
-        });
-        return;
-      }
-      
       await completeRound(gameId, currentRound!, roundWinner);
     }, 3000);
   }
@@ -837,19 +811,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Player not found" });
       }
       
-      console.log(`Leave request - Game ${gameId} status: ${game.status}, Player: ${leavingPlayer.name}`);
-      
-      // CRITICAL FIX: If game was just started, ignore leave requests for 5 seconds
-      if (game.status === 'playing' && game.questionDeadline) {
-        const gameStartTime = new Date(game.questionDeadline).getTime() - 15000; // Question starts 15s before deadline
-        const timeSinceStart = Date.now() - gameStartTime;
-        
-        if (timeSinceStart < 5000) { // Less than 5 seconds since game started
-          console.log(`Game ${gameId}: Ignoring leave request from ${leavingPlayer.name} - game just started (${timeSinceStart}ms ago)`);
-          return res.json({ message: "Leave request ignored - game just started" });
-        }
-      }
-      
       // Handle different leave scenarios
       if (game.status === 'waiting') {
         // If host leaves lobby, close the entire game
@@ -863,15 +824,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.removePlayerFromGame(gameId, sessionId);
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
-      } else if (game.status === 'playing' || game.status === 'showing_results') {
+      } else if (game.status === 'playing') {
         // During active game, end the game immediately without winner
         await storage.updateGame(gameId, {
           status: 'finished',
           winnerId: null // Important: null winnerId indicates disconnection, not normal win
         });
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game (status: ${game.status}). Game ended.`);
-      } else {
-        console.log(`Game ${gameId}: Leave request ignored - game status is ${game.status}`);
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game. Game ended.`);
       }
       
       res.json({ message: "Left game successfully" });

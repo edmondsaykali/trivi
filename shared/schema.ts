@@ -25,7 +25,6 @@ export const players = pgTable("players", {
   score: integer("score").default(0),
   sessionId: text("session_id").notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
-  lastSeen: timestamp("last_seen").defaultNow(),
 });
 
 export const answers = pgTable("answers", {
@@ -68,7 +67,6 @@ export const insertGameSchema = createInsertSchema(games).omit({
 export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
   joinedAt: true,
-  lastSeen: true,
 });
 
 export const insertAnswerSchema = createInsertSchema(answers).omit({

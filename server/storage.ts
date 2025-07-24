@@ -19,7 +19,6 @@ export interface IStorage {
   removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean>;
   updatePlayerHeartbeat(sessionId: string): Promise<boolean>;
   cleanupStalePlayers(): Promise<void>;
-  checkPlayersActiveStatus(gameId: number): Promise<{activeCount: number, inactivePlayers: Player[]}>;
   
   // Answers
   createAnswer(answer: InsertAnswer): Promise<Answer>;
@@ -201,23 +200,6 @@ export class MemStorage implements IStorage {
     return updatedRound;
   }
 
-  // Check players active status based on heartbeat
-  async checkPlayersActiveStatus(gameId: number): Promise<{activeCount: number, inactivePlayers: Player[]}> {
-    const gamePlayers = await this.getPlayersByGameId(gameId);
-    const now = Date.now();
-    const INACTIVE_THRESHOLD = 30000; // 30 seconds without heartbeat = inactive
-    
-    const inactivePlayers = gamePlayers.filter(player => {
-      if (!player.lastSeen) return true; // No heartbeat ever = inactive
-      return (now - new Date(player.lastSeen).getTime()) > INACTIVE_THRESHOLD;
-    });
-    
-    return {
-      activeCount: gamePlayers.length - inactivePlayers.length,
-      inactivePlayers
-    };
-  }
-
   // Questions - Not needed for in-memory, uses hardcoded questions
   async getRandomQuestionByType(type: string): Promise<Question | undefined> {
     // This would use hardcoded questions for in-memory storage
@@ -316,16 +298,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
-    try {
-      const result = await this.db.update(players)
-        .set({ lastSeen: new Date() })
-        .where(eq(players.sessionId, sessionId))
-        .returning();
-      return result.length > 0;
-    } catch (error) {
-      console.error('Error updating heartbeat:', error);
-      return false;
-    }
+    // For now, just return true as we don't track heartbeats in the database yet
+    // In a production app, you'd have a lastSeen timestamp field
+    return true;
   }
 
   async cleanupStalePlayers(): Promise<void> {
@@ -366,23 +341,6 @@ export class DatabaseStorage implements IStorage {
   async updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined> {
     const [round] = await this.db.update(rounds).set(updates).where(eq(rounds.id, id)).returning();
     return round;
-  }
-
-  // Check players active status based on heartbeat
-  async checkPlayersActiveStatus(gameId: number): Promise<{activeCount: number, inactivePlayers: Player[]}> {
-    const gamePlayers = await this.getPlayersByGameId(gameId);
-    const now = Date.now();
-    const INACTIVE_THRESHOLD = 30000; // 30 seconds without heartbeat = inactive
-    
-    const inactivePlayers = gamePlayers.filter(player => {
-      if (!player.lastSeen) return true; // No heartbeat ever = inactive
-      return (now - new Date(player.lastSeen).getTime()) > INACTIVE_THRESHOLD;
-    });
-    
-    return {
-      activeCount: gamePlayers.length - inactivePlayers.length,
-      inactivePlayers
-    };
   }
 
   // Questions
@@ -433,8 +391,7 @@ async function initializeDatabase() {
         avatar TEXT NOT NULL,
         score INTEGER DEFAULT 0,
         session_id TEXT NOT NULL,
-        joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
-        last_seen TIMESTAMP DEFAULT NOW()
+        joined_at TIMESTAMP DEFAULT NOW() NOT NULL
       )
     `);
 
@@ -462,16 +419,6 @@ async function initializeDatabase() {
         completed_at TIMESTAMP
       )
     `);
-
-    // Add lastSeen column if it doesn't exist (migration)
-    try {
-      await client.query(`
-        ALTER TABLE players ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT NOW()
-      `);
-      console.log('✅ lastSeen column added/verified');
-    } catch (error) {
-      console.log('lastSeen column migration skipped (already exists)');
-    }
 
     client.release();
     await pool.end();
