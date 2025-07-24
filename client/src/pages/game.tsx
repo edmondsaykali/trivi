@@ -68,7 +68,10 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
           sessionId
         });
         
-        if (!response.isOpponentActive) {
+        const data = await response.json();
+        console.log('Opponent activity check:', data);
+        
+        if (!data.isOpponentActive) {
           toast({
             title: "Game Ended",
             description: "The other player has left the game.",
