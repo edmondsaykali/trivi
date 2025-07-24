@@ -463,17 +463,18 @@ async function initializeDatabase() {
       )
     `);
 
-    client.release();
-    await pool.end();
-
     // Add lastSeen column if it doesn't exist (migration)
     try {
       await client.query(`
         ALTER TABLE players ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT NOW()
       `);
+      console.log('✅ lastSeen column added/verified');
     } catch (error) {
       console.log('lastSeen column migration skipped (already exists)');
     }
+
+    client.release();
+    await pool.end();
 
     console.log("✅ Database tables initialized successfully");
     return true;

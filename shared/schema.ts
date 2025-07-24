@@ -68,6 +68,7 @@ export const insertGameSchema = createInsertSchema(games).omit({
 export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
   joinedAt: true,
+  lastSeen: true,
 });
 
 export const insertAnswerSchema = createInsertSchema(answers).omit({
