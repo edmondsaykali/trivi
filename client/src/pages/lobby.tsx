@@ -120,8 +120,19 @@ export default function Lobby({ params }: LobbyProps) {
     
     setIsStarting(true);
     try {
-      const response = await apiRequest('POST', `/api/games/${gameId}/start`, {});
+      const response = await fetch(`/api/games/${gameId}/start`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to start game');
+      }
+      
       const data = await response.json();
+      console.log('Game started successfully:', data);
       // No toast needed, game will start
     } catch (error: any) {
       console.error('Start game error:', error);

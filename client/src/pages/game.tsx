@@ -36,8 +36,6 @@ interface QuestionResultsModalProps {
 function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionResultsModalProps) {
   const { game } = gameState;
   const [answers, setAnswers] = useState<any[]>([]);
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
   
   useEffect(() => {
     // Fetch answers for this round/question
@@ -55,23 +53,6 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     
     fetchAnswers();
   }, [game.id, game.currentRound, game.currentQuestion]);
-  
-  // Check if both players are still connected after showing results
-  useEffect(() => {
-    // Only check after we have the current game state
-    if (!gameState || gameState.game.status !== 'showing_results') return;
-    
-    // Check if we have both players
-    if (gameState.players.length < 2) {
-      toast({
-        title: "Game Ended",
-        description: "The other player has left the game.",
-      });
-      setTimeout(() => {
-        setLocation('/');
-      }, 1500);
-    }
-  }, [gameState, toast, setLocation]);
   
   // Use the ResultsDisplay component
   return (

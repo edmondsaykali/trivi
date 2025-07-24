@@ -825,9 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
       } else if (game.status === 'playing' || game.status === 'showing_results') {
-        // During active game, remove the player
-        // The game will detect this after showing results
-        await storage.removePlayerFromGame(gameId, sessionId);
+        // During active game, just log the departure
         console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game.`);
       }
       

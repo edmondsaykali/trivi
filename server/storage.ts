@@ -130,11 +130,14 @@ export class MemStorage implements IStorage {
   }
 
   async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
-    // Remove player from any game state
-    for (const [id, player] of Array.from(this.players.entries())) {
-      if (player.gameId === gameId && player.sessionId === sessionId) {
-        this.players.delete(id);
-        return true;
+    // Only remove players from games that haven't started yet
+    const game = await this.getGameById(gameId);
+    if (game && game.status === 'waiting') {
+      for (const [id, player] of Array.from(this.players.entries())) {
+        if (player.gameId === gameId && player.sessionId === sessionId) {
+          this.players.delete(id);
+          return true;
+        }
       }
     }
     return false;
@@ -313,10 +316,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
-    // Remove player from any game state
-    const result = await this.db.delete(players)
-      .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
-    return true;
+    // Only remove players from games that haven't started yet
+    const game = await this.getGameById(gameId);
+    if (game && game.status === 'waiting') {
+      const result = await this.db.delete(players)
+        .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
+      return true;
+    }
+    return false;
   }
 
   async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
