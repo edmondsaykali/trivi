@@ -81,6 +81,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 24, 2025)
 
+### Simplified Disconnection System (July 24 - 6:15 PM)
+- ✅ **IMPLEMENTED: lastSeenAt-based presence tracking** - Each player has lastSeenAt timestamp updated on interactions
+- ✅ **REMOVED: Complex real-time disconnection checks** - No more heartbeat, timers, or continuous monitoring
+- ✅ **ADDED: Post-results opponent check** - Single check after each question's results to verify opponent is active
+- ✅ **SIMPLIFIED: Disconnection threshold** - 30-second window to determine if player is still active
+- ✅ **UPDATED: Leave game logic** - Players removed immediately when leaving during active game
+- ✅ **WORKING: Check-opponent API endpoint** - `/api/games/:id/check-opponent` verifies opponent activity
+
 ### Player Disconnection & Lobby Fixes (July 24)
 - ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
 - ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave

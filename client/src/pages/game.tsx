@@ -56,22 +56,36 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     fetchAnswers();
   }, [game.id, game.currentRound, game.currentQuestion]);
   
-  // Check if both players are still connected after showing results
+  // Check opponent activity after showing results
   useEffect(() => {
-    // Only check after we have the current game state
+    // Only check when we're showing results
     if (!gameState || gameState.game.status !== 'showing_results') return;
     
-    // Check if we have both players
-    if (gameState.players.length < 2) {
-      toast({
-        title: "Game Ended",
-        description: "The other player has left the game.",
-      });
-      setTimeout(() => {
-        setLocation('/');
-      }, 1500);
-    }
-  }, [gameState, toast, setLocation]);
+    const checkOpponent = async () => {
+      try {
+        const sessionId = sessionStorage.getItem('trivi-session');
+        const response = await apiRequest('POST', `/api/games/${game.id}/check-opponent`, {
+          sessionId
+        });
+        
+        if (!response.isOpponentActive) {
+          toast({
+            title: "Game Ended",
+            description: "The other player has left the game.",
+          });
+          setTimeout(() => {
+            setLocation('/');
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Failed to check opponent activity:', error);
+      }
+    };
+    
+    // Check after a short delay to ensure results are shown
+    const timer = setTimeout(checkOpponent, 1000);
+    return () => clearTimeout(timer);
+  }, [gameState?.game.status, game.id, toast, setLocation]);
   
   // Use the ResultsDisplay component
   return (

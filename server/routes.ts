@@ -736,6 +736,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already answered" });
       }
       
+      // Update player's lastSeenAt when they submit an answer
+      await storage.updatePlayerLastSeen(sessionId);
+      
       const answerRecord = await storage.createAnswer({
         gameId,
         playerId: player.id,
@@ -839,6 +842,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+
+  // Check opponent activity
+  app.post("/api/games/:id/check-opponent", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID required" });
+      }
+      
+      // Update current player's lastSeenAt
+      await storage.updatePlayerLastSeen(sessionId);
+      
+      // Check if opponent is still active
+      const isOpponentActive = await storage.checkOpponentActivity(gameId, sessionId);
+      
+      res.json({ isOpponentActive });
+    } catch (error) {
+      console.error("Error checking opponent activity:", error);
+      res.status(500).json({ message: "Failed to check opponent activity" });
+    }
+  });
 
   // Get game state
   app.get("/api/games/:id", async (req, res) => {

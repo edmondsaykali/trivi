@@ -17,8 +17,8 @@ export interface IStorage {
   getPlayerById(id: number): Promise<Player | undefined>;
   updatePlayerScore(id: number, score: number): Promise<Player | undefined>;
   removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean>;
-  updatePlayerHeartbeat(sessionId: string): Promise<boolean>;
-  cleanupStalePlayers(): Promise<void>;
+  updatePlayerLastSeen(sessionId: string): Promise<boolean>;
+  checkOpponentActivity(gameId: number, sessionId: string): Promise<boolean>;
   
   // Answers
   createAnswer(answer: InsertAnswer): Promise<Answer>;
@@ -73,7 +73,7 @@ export class MemStorage implements IStorage {
       currentRound: insertGame.currentRound || null,
       currentQuestion: insertGame.currentQuestion || null,
       questionData: insertGame.questionData || null,
-      allRoundQuestions: insertGame.allRoundQuestions || null,
+
       questionDeadline: insertGame.questionDeadline || null,
       lastRoundWinnerId: insertGame.lastRoundWinnerId || null,
       waitingForAnswers: insertGame.waitingForAnswers || null,
@@ -106,6 +106,7 @@ export class MemStorage implements IStorage {
       ...insertPlayer,
       id,
       joinedAt: new Date(),
+      lastSeenAt: new Date(),
       score: insertPlayer.score || 0,
     };
     this.players.set(id, player);
@@ -140,14 +141,28 @@ export class MemStorage implements IStorage {
     return false;
   }
 
-  async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
-    // For in-memory storage, just return true - no persistence needed
-    return true;
+  async updatePlayerLastSeen(sessionId: string): Promise<boolean> {
+    for (const [id, player] of Array.from(this.players.entries())) {
+      if (player.sessionId === sessionId) {
+        const updatedPlayer = { ...player, lastSeenAt: new Date() };
+        this.players.set(id, updatedPlayer);
+        return true;
+      }
+    }
+    return false;
   }
 
-  async cleanupStalePlayers(): Promise<void> {
-    // In-memory storage doesn't need cleanup
-    return;
+  async checkOpponentActivity(gameId: number, sessionId: string): Promise<boolean> {
+    const players = await this.getPlayersByGameId(gameId);
+    const opponent = players.find(p => p.sessionId !== sessionId);
+    
+    if (!opponent) return false;
+    
+    const now = new Date().getTime();
+    const lastSeen = new Date(opponent.lastSeenAt).getTime();
+    const thirtySecondsAgo = now - 30000; // 30 seconds
+    
+    return lastSeen > thirtySecondsAgo;
   }
 
   // Game state
@@ -319,15 +334,24 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
-    // For now, just return true as we don't track heartbeats in the database yet
-    // In a production app, you'd have a lastSeen timestamp field
+  async updatePlayerLastSeen(sessionId: string): Promise<boolean> {
+    const result = await this.db.update(players)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(players.sessionId, sessionId));
     return true;
   }
 
-  async cleanupStalePlayers(): Promise<void> {
-    // Database storage doesn't need cleanup in this implementation
-    return;
+  async checkOpponentActivity(gameId: number, sessionId: string): Promise<boolean> {
+    const allPlayers = await this.getPlayersByGameId(gameId);
+    const opponent = allPlayers.find(p => p.sessionId !== sessionId);
+    
+    if (!opponent) return false;
+    
+    const now = new Date().getTime();
+    const lastSeen = new Date(opponent.lastSeenAt).getTime();
+    const thirtySecondsAgo = now - 30000; // 30 seconds
+    
+    return lastSeen > thirtySecondsAgo;
   }
 
   // Game state
@@ -436,9 +460,18 @@ async function initializeDatabase() {
         avatar TEXT NOT NULL,
         score INTEGER DEFAULT 0,
         session_id TEXT NOT NULL,
-        joined_at TIMESTAMP DEFAULT NOW() NOT NULL
+        joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        last_seen_at TIMESTAMP DEFAULT NOW() NOT NULL
       )
     `);
+    
+    // Add last_seen_at column if it doesn't exist
+    await client.query(`
+      ALTER TABLE players 
+      ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP DEFAULT NOW() NOT NULL
+    `).catch(() => {
+      // Column might already exist, ignore error
+    });
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS answers (
