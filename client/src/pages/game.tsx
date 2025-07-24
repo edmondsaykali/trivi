@@ -114,13 +114,18 @@ export default function Game({ params }: GameProps) {
   const currentPlayer = gameState?.players.find(p => p.sessionId === sessionId);
   const opponent = gameState?.players.find(p => p.sessionId !== sessionId);
   
-  // Debug logging
-  if (gameState && !currentPlayer && sessionId) {
-    console.error('Session mismatch:', {
-      sessionId,
-      players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId }))
-    });
-  }
+  // Debug logging - always log to help debug
+  useEffect(() => {
+    if (gameState) {
+      console.log('Game state check:', {
+        sessionId,
+        hasSessionId: !!sessionId,
+        players: gameState.players.map(p => ({ id: p.id, name: p.name, sessionId: p.sessionId })),
+        currentPlayer: currentPlayer ? { id: currentPlayer.id, name: currentPlayer.name } : null,
+        gameStatus: gameState.game.status
+      });
+    }
+  }, [gameState, sessionId, currentPlayer]);
 
   useEffect(() => {
     if (gameState?.game.status === 'finished') {

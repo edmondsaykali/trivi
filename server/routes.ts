@@ -828,10 +828,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
       } else if (game.status === 'playing' || game.status === 'showing_results') {
-        // During active game, remove the player
-        // The game will detect this after showing results
-        await storage.removePlayerFromGame(gameId, sessionId);
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game.`);
+        // During active game, don't remove the player immediately
+        // Just log it - the check-opponent endpoint will handle disconnection detection
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game (not removing yet).`);
       }
       
       res.json({ message: "Left game successfully" });
@@ -856,8 +855,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update current player's lastSeenAt
       await storage.updatePlayerLastSeen(sessionId);
       
+      // Get all players
+      const players = await storage.getPlayersByGameId(gameId);
+      const currentPlayer = players.find(p => p.sessionId === sessionId);
+      const opponent = players.find(p => p.sessionId !== sessionId);
+      
+      if (!currentPlayer) {
+        return res.status(403).json({ message: "Not in this game" });
+      }
+      
+      // If no opponent, they've already left
+      if (!opponent) {
+        return res.json({ isOpponentActive: false });
+      }
+      
       // Check if opponent is still active
-      const isOpponentActive = await storage.checkOpponentActivity(gameId, sessionId);
+      const now = new Date().getTime();
+      const lastSeen = new Date(opponent.lastSeenAt).getTime();
+      const thirtySecondsAgo = now - 30000; // 30 seconds
+      
+      const isOpponentActive = lastSeen > thirtySecondsAgo;
+      
+      // If opponent is inactive, remove them from the game
+      if (!isOpponentActive) {
+        await storage.removePlayerFromGame(gameId, opponent.sessionId);
+        console.log(`Game ${gameId}: Removed inactive player ${opponent.name} after checking activity`);
+      }
       
       res.json({ isOpponentActive });
     } catch (error) {
