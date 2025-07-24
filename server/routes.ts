@@ -897,7 +897,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get game state
+  // Update player activity
+  app.post("/api/players/:sessionId/activity", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID required" });
+      }
+      
+      await storage.updatePlayerLastSeen(sessionId);
+      res.json({ message: "Activity updated" });
+    } catch (error) {
+      console.error("Error updating player activity:", error);
+      res.status(500).json({ message: "Failed to update activity" });
+    }
+  });
+
+  // Get game state with inactive player cleanup
   app.get("/api/games/:id", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
@@ -905,6 +922,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Clean up inactive players in waiting lobbies
+      if (game.status === 'waiting') {
+        const players = await storage.getPlayersByGameId(gameId);
+        const now = new Date().getTime();
+        const thirtySecondsAgo = now - 30000; // 30 seconds
+        
+        for (const player of players) {
+          const lastSeen = new Date(player.lastSeenAt).getTime();
+          if (lastSeen < thirtySecondsAgo) {
+            // Remove inactive player, but don't close lobby if it's the host
+            if (player.id === game.creatorId) {
+              // Host is inactive, close the lobby
+              await storage.updateGame(gameId, { status: 'finished' });
+              console.log(`Game ${gameId}: Closed lobby due to inactive host ${player.name}`);
+              return res.json({ 
+                game: { ...game, status: 'finished' }, 
+                players: [], 
+                rounds: [] 
+              });
+            } else {
+              // Non-host player is inactive, just remove them
+              await storage.removePlayerFromGame(gameId, player.sessionId);
+              console.log(`Game ${gameId}: Removed inactive player ${player.name} from lobby`);
+            }
+          }
+        }
       }
       
       const players = await storage.getPlayersByGameId(gameId);

@@ -74,6 +74,28 @@ export default function Lobby({ params }: LobbyProps) {
     }
   }, [gameState?.players.length, gameState?.game.status, gameId, toast, isCreator, isStarting, isTransitioning, setLocation]);
 
+  // Update player activity in lobby
+  useEffect(() => {
+    if (!gameState || gameState.game.status !== 'waiting' || !sessionId) return;
+    
+    const updateActivity = async () => {
+      try {
+        await fetch(`/api/players/${sessionId}/activity`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (error) {
+        console.error('Failed to update player activity:', error);
+      }
+    };
+    
+    // Update activity immediately and then every 5 seconds
+    updateActivity();
+    const interval = setInterval(updateActivity, 5000);
+    
+    return () => clearInterval(interval);
+  }, [gameState?.game.status, sessionId]);
+
   // Handle leaving the lobby
   useEffect(() => {
     const handleBeforeUnload = () => {

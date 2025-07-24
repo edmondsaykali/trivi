@@ -96,6 +96,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ **ADDED: Server-side transition grace period** - 5-second window to ignore leave requests after game creation
 - ✅ **IMPROVED: Transition timing** - Added delays to ensure state flags are set before navigation
 
+### Lobby Disconnection Detection (July 24 - 7:05 PM)
+- ✅ **IMPLEMENTED: Automatic inactive player cleanup** - Server removes players who haven't been active for 30+ seconds
+- ✅ **ADDED: Client-side activity heartbeat** - Players send activity updates every 5 seconds while in lobby
+- ✅ **ENHANCED: Lobby spot management** - Inactive players automatically removed, spots opened for new players
+- ✅ **IMPROVED: Host abandonment handling** - Lobby closes if host becomes inactive for 30+ seconds
+- ✅ **WORKING: Real-time cleanup on game state requests** - Cleanup happens during normal game state polling
+
 ### Player Disconnection & Lobby Fixes (July 24)
 - ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
 - ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave
