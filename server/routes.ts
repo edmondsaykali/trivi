@@ -824,13 +824,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.removePlayerFromGame(gameId, sessionId);
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
-      } else if (game.status === 'playing') {
-        // During active game, end the game immediately without winner
-        await storage.updateGame(gameId, {
-          status: 'finished',
-          winnerId: null // Important: null winnerId indicates disconnection, not normal win
-        });
-        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game. Game ended.`);
+      } else if (game.status === 'playing' || game.status === 'showing_results') {
+        // During active game, remove the player
+        // The game will detect this after showing results
+        await storage.removePlayerFromGame(gameId, sessionId);
+        console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game.`);
       }
       
       res.json({ message: "Left game successfully" });
@@ -840,25 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Heartbeat endpoint to detect player disconnections
-  app.post("/api/games/:id/heartbeat", async (req, res) => {
-    try {
-      const gameId = parseInt(req.params.id);
-      const { sessionId } = req.body;
-      
-      if (!sessionId) {
-        return res.status(400).json({ message: "Session ID required" });
-      }
-      
-      // Update player's last seen timestamp
-      await storage.updatePlayerHeartbeat(sessionId);
-      
-      res.json({ message: "Heartbeat received" });
-    } catch (error) {
-      console.error("Error updating heartbeat:", error);
-      res.status(500).json({ message: "Failed to update heartbeat" });
-    }
-  });
+
 
   // Get game state
   app.get("/api/games/:id", async (req, res) => {

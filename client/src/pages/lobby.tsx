@@ -113,26 +113,7 @@ export default function Lobby({ params }: LobbyProps) {
     };
   }, [gameId, gameState?.game.status, isStarting, isTransitioning]);
 
-  // Send heartbeat to server
-  useEffect(() => {
-    if (!sessionId || gameState?.game.status !== 'waiting') return;
 
-    const sendHeartbeat = async () => {
-      try {
-        await apiRequest('POST', `/api/games/${gameId}/heartbeat`, { sessionId });
-      } catch (error) {
-        console.error('Heartbeat error:', error);
-      }
-    };
-
-    // Send initial heartbeat
-    sendHeartbeat();
-
-    // Send heartbeat every 5 seconds
-    const interval = setInterval(sendHeartbeat, 5000);
-
-    return () => clearInterval(interval);
-  }, [gameId, sessionId, gameState?.game.status]);
 
   const startGame = async () => {
     if (!isCreator) return;

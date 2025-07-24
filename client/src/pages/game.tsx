@@ -36,6 +36,8 @@ interface QuestionResultsModalProps {
 function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionResultsModalProps) {
   const { game } = gameState;
   const [answers, setAnswers] = useState<any[]>([]);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
   useEffect(() => {
     // Fetch answers for this round/question
@@ -53,6 +55,23 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     
     fetchAnswers();
   }, [game.id, game.currentRound, game.currentQuestion]);
+  
+  // Check if both players are still connected after showing results
+  useEffect(() => {
+    // Only check after we have the current game state
+    if (!gameState || gameState.game.status !== 'showing_results') return;
+    
+    // Check if we have both players
+    if (gameState.players.length < 2) {
+      toast({
+        title: "Game Ended",
+        description: "The other player has left the game.",
+      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 1500);
+    }
+  }, [gameState, toast, setLocation]);
   
   // Use the ResultsDisplay component
   return (
@@ -98,42 +117,7 @@ export default function Game({ params }: GameProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
-  // Check if game ended (someone left)
-  useEffect(() => {
-    // Show message if game finished with no winner (indicates disconnection)
-    if (gameState && gameState.game.status === 'finished' && gameState.game.winnerId === null) {
-      toast({
-        title: "Game Ended",
-        description: "The other player has left the game.",
-      });
-      // Redirect to home page after 3 seconds
-      setTimeout(() => {
-        setLocation('/');
-      }, 3000);
-    }
-  }, [gameState?.game.status, gameState?.game.winnerId, toast, setLocation]);
 
-  // Send heartbeat during game
-  useEffect(() => {
-    const sessionId = sessionStorage.getItem('trivi-session');
-    if (!sessionId || gameState?.game.status !== 'playing') return;
-
-    const sendHeartbeat = async () => {
-      try {
-        await apiRequest('POST', `/api/games/${gameId}/heartbeat`, { sessionId });
-      } catch (error) {
-        console.error('Game heartbeat error:', error);
-      }
-    };
-
-    // Send initial heartbeat
-    sendHeartbeat();
-
-    // Send heartbeat every 5 seconds
-    const interval = setInterval(sendHeartbeat, 5000);
-
-    return () => clearInterval(interval);
-  }, [gameId, gameState?.game.status]);
 
   // Scroll to top on component mount  
   useEffect(() => {

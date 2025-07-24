@@ -32,6 +32,12 @@ export interface IStorage {
   
   // Questions
   getRandomQuestionByType(type: string): Promise<Question | undefined>;
+  
+  // Game state
+  getGameState(id: number): Promise<any>;
+  addPlayerToGame(gameId: number, player: InsertPlayer): Promise<Player>;
+  submitAnswer(answer: InsertAnswer): Promise<void>;
+  getAnswersForRound(gameId: number, round: number, question: number): Promise<Answer[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -124,14 +130,11 @@ export class MemStorage implements IStorage {
   }
 
   async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
-    // Only remove players from games that haven't started yet
-    const game = await this.getGameById(gameId);
-    if (game && game.status === 'waiting') {
-      for (const [id, player] of Array.from(this.players.entries())) {
-        if (player.gameId === gameId && player.sessionId === sessionId) {
-          this.players.delete(id);
-          return true;
-        }
+    // Remove player from any game state
+    for (const [id, player] of Array.from(this.players.entries())) {
+      if (player.gameId === gameId && player.sessionId === sessionId) {
+        this.players.delete(id);
+        return true;
       }
     }
     return false;
@@ -145,6 +148,29 @@ export class MemStorage implements IStorage {
   async cleanupStalePlayers(): Promise<void> {
     // In-memory storage doesn't need cleanup
     return;
+  }
+
+  // Game state
+  async getGameState(id: number): Promise<any> {
+    const game = await this.getGameById(id);
+    if (!game) return null;
+    
+    const players = await this.getPlayersByGameId(id);
+    const rounds = await this.getRoundsByGameId(id);
+    
+    return { game, players, rounds };
+  }
+
+  async addPlayerToGame(gameId: number, player: InsertPlayer): Promise<Player> {
+    return this.createPlayer(player);
+  }
+
+  async submitAnswer(answer: InsertAnswer): Promise<void> {
+    await this.createAnswer(answer);
+  }
+
+  async getAnswersForRound(gameId: number, round: number, question: number): Promise<Answer[]> {
+    return this.getAnswersByGameRound(gameId, round, question);
   }
 
   // Answers
@@ -287,14 +313,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removePlayerFromGame(gameId: number, sessionId: string): Promise<boolean> {
-    // Only remove players from games that haven't started yet
-    const game = await this.getGameById(gameId);
-    if (game && game.status === 'waiting') {
-      const result = await this.db.delete(players)
-        .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
-      return true;
-    }
-    return false;
+    // Remove player from any game state
+    const result = await this.db.delete(players)
+      .where(and(eq(players.gameId, gameId), eq(players.sessionId, sessionId)));
+    return true;
   }
 
   async updatePlayerHeartbeat(sessionId: string): Promise<boolean> {
@@ -306,6 +328,29 @@ export class DatabaseStorage implements IStorage {
   async cleanupStalePlayers(): Promise<void> {
     // Database storage doesn't need cleanup in this implementation
     return;
+  }
+
+  // Game state
+  async getGameState(id: number): Promise<any> {
+    const game = await this.getGameById(id);
+    if (!game) return null;
+    
+    const players = await this.getPlayersByGameId(id);
+    const rounds = await this.getRoundsByGameId(id);
+    
+    return { game, players, rounds };
+  }
+
+  async addPlayerToGame(gameId: number, player: InsertPlayer): Promise<Player> {
+    return this.createPlayer(player);
+  }
+
+  async submitAnswer(answer: InsertAnswer): Promise<void> {
+    await this.createAnswer(answer);
+  }
+
+  async getAnswersForRound(gameId: number, round: number, question: number): Promise<Answer[]> {
+    return this.getAnswersByGameRound(gameId, round, question);
   }
 
   // Answers
