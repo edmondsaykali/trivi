@@ -72,12 +72,19 @@ export default function Lobby({ params }: LobbyProps) {
     // Update stored player count
     sessionStorage.setItem(lobbyKey, currentPlayerCount.toString());
     
-    // Only show message if player count decreased (someone left) and we're the host
-    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator) {
-      toast({
-        title: "Player Left",
-        description: "The other player has left the lobby.",
-      });
+    // Show message if player count changed in waiting lobby
+    if (previousPlayerCount !== 0 && previousPlayerCount !== currentPlayerCount && gameState.game.status === 'waiting') {
+      if (currentPlayerCount < previousPlayerCount) {
+        toast({
+          title: "Player Left",
+          description: "A player has left the lobby.",
+        });
+      } else if (currentPlayerCount > previousPlayerCount) {
+        toast({
+          title: "Player Joined",
+          description: "A player has joined the lobby.",
+        });
+      }
     }
   }, [gameState?.players.length, gameState?.game.status, gameId, toast, isCreator, isStarting, isTransitioning, setLocation]);
 

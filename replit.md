@@ -81,14 +81,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 24, 2025)
 
-### Player Disconnection & Lobby Fixes (July 24)
-- ✅ **FIXED: Lobby false "player left" message** - No longer shows on first game creation
-- ✅ **ENHANCED: Lobby player tracking** - Properly updates when players join/leave
-- ✅ **IMPROVED: Game disconnection handling** - Shows 3-second message and redirects home when opponent leaves
-- ✅ **FIXED: Timer submission blocking** - Prevents answer submission after deadline
-- ✅ **ENHANCED: Mobile experience** - Disabled tap highlights and pre-selection
-- ✅ **UPDATED: Results display** - Shows elapsed time (e.g., "7s") instead of timestamps
-- ✅ **FIXED: "Game not found" error** - Improved error handling and validation for game start
+### Player Disconnection & Activity Tracking Improvements (July 24)
+- ✅ **IMPLEMENTED: Player activity tracking with lastSeen timestamps** - Heartbeat system updates player presence every 5 seconds
+- ✅ **FIXED: Player disconnection detection after every question** - Checks happen after showing results for both Q1 and Q2
+- ✅ **ENHANCED: Automatic game termination** - Games end when player inactive for 30+ seconds
+- ✅ **IMPROVED: Lobby notifications** - Shows when players join or leave the lobby for all players
+- ✅ **FIXED: Host leaving lobby** - Lobby properly closes and redirects all players when host leaves
+- ✅ **ADDED: Database migration for lastSeen column** - Proper player activity tracking in database
+- ✅ **ENHANCED: Disconnection messaging** - Shows "other player left" and redirects home after 3 seconds
 
 ## Recent Changes (July 21, 2025)
 

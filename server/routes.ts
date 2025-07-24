@@ -210,17 +210,7 @@ async function processGame(gameId: number) {
   const timeRemaining = game.questionDeadline ? new Date(game.questionDeadline).getTime() - Date.now() : 0;
   const timeIsUp = timeRemaining <= 0;
 
-  // Check if players are still active before processing
-  const playerActivity = await storage.checkPlayersActiveStatus(gameId);
-  
-  if (playerActivity.activeCount < 2) {
-    console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active - ending game`);
-    await storage.updateGame(gameId, {
-      status: 'finished',
-      winnerId: null // No winner due to disconnection
-    });
-    return;
-  }
+  // Don't check player activity during initial processing - only check after showing results
 
   // Handle timeout - auto-save "no answer" for players who didn't respond
   if (timeIsUp) {
@@ -298,6 +288,18 @@ async function processGame(gameId: number) {
     
     // Show results for 3 seconds, then move to Q2
     setTimeout(async () => {
+      // Check if players are still active after showing Q1 results
+      const playerActivity = await storage.checkPlayersActiveStatus(gameId);
+      
+      if (playerActivity.activeCount < 2) {
+        console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active after Q1 - ending game`);
+        await storage.updateGame(gameId, {
+          status: 'finished',
+          winnerId: null // No winner due to disconnection
+        });
+        return;
+      }
+      
       // Start Q2 with pre-loaded data
       const deadline = new Date(Date.now() + 15000);
       await storage.updateGame(gameId, {
@@ -327,6 +329,18 @@ async function processGame(gameId: number) {
     
     // Show results for 3 seconds, then complete round
     setTimeout(async () => {
+      // Check if players are still active after showing results
+      const playerActivity = await storage.checkPlayersActiveStatus(gameId);
+      
+      if (playerActivity.activeCount < 2) {
+        console.log(`Game ${gameId}: Only ${playerActivity.activeCount}/2 players active after results - ending game`);
+        await storage.updateGame(gameId, {
+          status: 'finished',
+          winnerId: null // No winner due to disconnection
+        });
+        return;
+      }
+      
       await completeRound(gameId, currentRound!, roundWinner);
     }, 3000);
   }
