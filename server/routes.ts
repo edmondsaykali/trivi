@@ -4,125 +4,8 @@ import { storage, databaseReady } from "./storage";
 import { insertGameSchema, insertPlayerSchema, insertAnswerSchema, Answer } from "@shared/schema";
 import { z } from "zod";
 
-// Expanded questions pool for engaging trivia gameplay
+// Game configuration
 const ROUNDS_TO_WIN = 5; // First to 5 rounds wins
-
-const QUESTIONS_POOL = {
-  multipleChoice: [
-    {
-      text: "Which planet is known as the 'Red Planet'?",
-      options: ["Earth", "Mars", "Jupiter", "Venus"],
-      correct: 1,
-      category: "Science"
-    },
-    {
-      text: "What is the capital of France?",
-      options: ["London", "Berlin", "Paris", "Madrid"],
-      correct: 2,
-      category: "Geography"
-    },
-    {
-      text: "Who painted the Mona Lisa?",
-      options: ["Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso", "Michelangelo"],
-      correct: 1,
-      category: "Art"
-    },
-    {
-      text: "What is the largest ocean on Earth?",
-      options: ["Atlantic", "Indian", "Arctic", "Pacific"],
-      correct: 3,
-      category: "Geography"
-    },
-    {
-      text: "Which element has the chemical symbol 'O'?",
-      options: ["Gold", "Oxygen", "Silver", "Iron"],
-      correct: 1,
-      category: "Science"
-    },
-    {
-      text: "What is the smallest country in the world?",
-      options: ["Monaco", "Vatican City", "Nauru", "San Marino"],
-      correct: 1,
-      category: "Geography"
-    },
-    {
-      text: "Who wrote 'Romeo and Juliet'?",
-      options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
-      correct: 1,
-      category: "Literature"
-    },
-    {
-      text: "What is the hardest natural substance on Earth?",
-      options: ["Gold", "Iron", "Diamond", "Quartz"],
-      correct: 2,
-      category: "Science"
-    },
-    {
-      text: "Which country invented pizza?",
-      options: ["France", "Italy", "Greece", "Spain"],
-      correct: 1,
-      category: "Food"
-    },
-    {
-      text: "What is the largest mammal in the world?",
-      options: ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
-      correct: 1,
-      category: "Animals"
-    }
-  ],
-  integer: [
-    {
-      text: "How many countries are there in Europe?",
-      correct: 44,
-      category: "Geography"
-    },
-    {
-      text: "In what year did World War II end?",
-      correct: 1945,
-      category: "History"
-    },
-    {
-      text: "How many bones are in the adult human body?",
-      correct: 206,
-      category: "Science"
-    },
-    {
-      text: "What is the speed of light in km/s (rounded to nearest thousand)?",
-      correct: 300000,
-      category: "Science"
-    },
-    {
-      text: "How many players are on a basketball team on the court at one time?",
-      correct: 5,
-      category: "Sports"
-    },
-    {
-      text: "How many strings does a standard guitar have?",
-      correct: 6,
-      category: "Music"
-    },
-    {
-      text: "How many sides does a hexagon have?",
-      correct: 6,
-      category: "Math"
-    },
-    {
-      text: "In what year was the iPhone first released?",
-      correct: 2007,
-      category: "Technology"
-    },
-    {
-      text: "How many minutes are in a full day?",
-      correct: 1440,
-      category: "Math"
-    },
-    {
-      text: "How many continents are there?",
-      correct: 7,
-      category: "Geography"
-    }
-  ]
-};
 
 function generateGameCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -157,68 +40,16 @@ async function getSmartQuestion(type: 'multiple_choice' | 'integer', gameId: num
   const usedQuestions = (game.usedQuestions as string[]) || [];
   const categoryProgress = (game.categoryProgress as Record<string, number>) || {};
   
-  // Try to get question from Supabase first
+  // Get question from database
   const question = await storage.getRandomQuestionByType(type);
-  if (question && !usedQuestions.includes(question.id.toString())) {
-    // Track usage and update category progress
-    const newUsedQuestions = [...usedQuestions, question.id.toString()];
-    const newCategoryProgress = { ...categoryProgress };
-    newCategoryProgress[question.category] = (newCategoryProgress[question.category] || 0) + 1;
-    
-    await storage.updateGame(gameId, {
-      usedQuestions: newUsedQuestions,
-      categoryProgress: newCategoryProgress
-    });
-    
-    return {
-      id: question.id.toString(),
-      text: question.text,
-      options: question.options as string[] || undefined,
-      correct: question.correctAnswer,
-      category: question.category,
-      type: question.type
-    };
+  if (!question) {
+    throw new Error(`No ${type} questions available in database`);
   }
   
-  // Fallback to hardcoded questions with smart selection
-  const typeMapping = { 'multiple_choice': 'multipleChoice', 'integer': 'integer' } as const;
-  const pool = QUESTIONS_POOL[typeMapping[type]];
-  
-  // Filter out used questions and apply fair category distribution
-  const availableQuestions = pool.filter((q, index) => {
-    const questionId = `${type}_${index}`;
-    return !usedQuestions.includes(questionId);
-  });
-  
-  if (availableQuestions.length === 0) {
-    // If all questions used, reset and start over
-    await storage.updateGame(gameId, {
-      usedQuestions: [],
-      categoryProgress: {}
-    });
-    return getSmartQuestion(type, gameId);
-  }
-  
-  // Find categories with minimum usage for fair distribution
-  const categoryUsage = availableQuestions.reduce((acc, q) => {
-    acc[q.category] = (categoryProgress[q.category] || 0);
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const minUsage = Object.values(categoryUsage).length > 0 ? Math.min(...Object.values(categoryUsage)) : 0;
-  const preferredQuestions = availableQuestions.filter(q => 
-    (categoryProgress[q.category] || 0) === minUsage
-  );
-  
-  // Select random question from preferred category pool
-  const selectedQuestion = preferredQuestions[Math.floor(Math.random() * preferredQuestions.length)];
-  const questionIndex = pool.indexOf(selectedQuestion);
-  const questionId = `${type}_${questionIndex}`;
-  
-  // Update tracking
-  const newUsedQuestions = [...usedQuestions, questionId];
+  // Track usage and update category progress
+  const newUsedQuestions = [...usedQuestions, question.id.toString()];
   const newCategoryProgress = { ...categoryProgress };
-  newCategoryProgress[selectedQuestion.category] = (newCategoryProgress[selectedQuestion.category] || 0) + 1;
+  newCategoryProgress[question.category] = (newCategoryProgress[question.category] || 0) + 1;
   
   await storage.updateGame(gameId, {
     usedQuestions: newUsedQuestions,
@@ -226,12 +57,12 @@ async function getSmartQuestion(type: 'multiple_choice' | 'integer', gameId: num
   });
   
   return {
-    id: questionId,
-    text: selectedQuestion.text,
-    options: selectedQuestion.options || undefined,
-    correct: selectedQuestion.correct,
-    category: selectedQuestion.category,
-    type
+    id: question.id.toString(),
+    text: question.text,
+    options: question.options as string[] || undefined,
+    correct: question.correctAnswer,
+    category: question.category,
+    type: question.type
   };
 }
 

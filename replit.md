@@ -48,8 +48,8 @@ Preferred communication style: Simple, everyday language.
 - **Question Display**: Adaptive UI for multiple-choice and integer questions
 
 ### Game Logic Components
-- **Question Pool**: Predefined sets of multiple-choice and integer questions
-- **Answer Validation**: Server-side answer checking and scoring
+- **Question Database**: All questions stored in PostgreSQL 'questions' table
+- **Answer Validation**: Server-side answer checking and scoring with text-based comparison
 - **Round Management**: State transitions between questions and rounds
 - **Winner Determination**: Rule-based scoring system with tie-breaking logic
 
@@ -81,7 +81,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 25, 2025)
 
-### Advanced Question Management System (July 25 - Latest)
+### Database-Only Question System (July 25 - Latest)
+- ✅ **REMOVED: All hardcoded questions** - Completely eliminated QUESTIONS_POOL from routes.ts
+- ✅ **IMPLEMENTED: Database-only questions** - All questions now come exclusively from the 'questions' table
+- ✅ **FIXED: Answer display system** - Answers now properly store and display actual text values instead of numeric indices
+- ✅ **UPDATED: Evaluation logic** - Multiple choice answers compared as text values with backwards compatibility
+
+### Advanced Question Management System (July 25)
 - ✅ **IMPLEMENTED: Smart question selection** - Questions now use fair category coverage ensuring balanced gameplay
 - ✅ **ADDED: Question uniqueness tracking** - No question appears twice in the same game for better player experience  
 - ✅ **ENHANCED: Category balancing** - Every category appears before any repeats, maintaining diverse question types
