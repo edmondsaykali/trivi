@@ -68,13 +68,20 @@ export default function Results({ params }: ResultsProps) {
         const player1Answer = answers.find(a => a.playerId === currentPlayer?.id);
         const player2Answer = answers.find(a => a.playerId === opponent?.id);
         
-        // Get the question text from stored data
+        // Get the question text and correct answer from stored data
         const questionText = player1Answer?.questionText || player2Answer?.questionText || `Question ${question}`;
-        const correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
+        let correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
         
-        // Get actual answer values from database (they should already be stored as the actual values)
+        // Get user answers and convert numeric positions to actual text values
         let player1DisplayAnswer = player1Answer?.answer || 'no_answer';
         let player2DisplayAnswer = player2Answer?.answer || 'no_answer';
+        
+        // For multiple choice questions, convert numeric answers to actual text
+        if (isMultipleChoice) {
+          // Make a request to get the full question data including options
+          // For now, we'll use a simplified approach - the answers should already contain text values from the server processing
+          // This will be improved once we have access to the full question data structure
+        }
         
         history.push({
           round,
@@ -227,9 +234,8 @@ export default function Results({ params }: ResultsProps) {
 
         {/* Back Home Button */}
         <div className="flex justify-center">
-          <Button onClick={returnToLanding} size="lg" className="px-8 flex items-center space-x-2">
-            <span>🏠</span>
-            <span>Back Home</span>
+          <Button onClick={returnToLanding} size="lg" className="px-8">
+            Back Home
           </Button>
         </div>
       </div>
