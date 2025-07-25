@@ -30,6 +30,8 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
       setIsTransitioning(true);
+      // Clear the lobby key to prevent incorrect player count comparisons
+      sessionStorage.removeItem(`trivi-lobby-${gameId}`);
       setLocation(`/game/${gameId}`);
     } else if (gameState?.game.status === 'finished') {
       // Don't redirect to results from lobby
@@ -41,8 +43,11 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (!gameState) return;
     
-    // If game finished while in lobby, host must have left
-    if (gameState.game.status === 'finished' && !isStarting && !isTransitioning) {
+    // Only show "lobby closed" if game finished before it started (in waiting status)
+    // If the game is playing or was playing, don't show this message
+    if (gameState.game.status === 'finished' && !isStarting && !isTransitioning && 
+        gameState.game.currentRound === 1 && gameState.game.currentQuestion === 1 && 
+        !gameState.game.questionData) {
       toast({
         title: "Lobby Closed",
         description: "The host has closed this lobby.",
@@ -73,7 +78,8 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       const sessionId = sessionStorage.getItem('trivi-session');
-      if (sessionId && gameState?.game.status === 'waiting') {
+      // Don't leave if we're transitioning to game
+      if (sessionId && gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
         navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
       }
     };
@@ -94,7 +100,9 @@ export default function Lobby({ params }: LobbyProps) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         const sessionId = sessionStorage.getItem('trivi-session');
-        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning) {
+        // Add extra check to ensure we're not leaving during game start
+        if (sessionId && gameState?.game.status === 'waiting' && !isStarting && !isTransitioning && 
+            gameState?.players.length < 2) {
           navigator.sendBeacon(`/api/games/${gameId}/leave`, JSON.stringify({ sessionId }));
         }
       }
