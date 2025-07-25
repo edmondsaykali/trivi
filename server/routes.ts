@@ -32,29 +32,28 @@ function getRandomAvatar(): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-// Enhanced question selection with fair category coverage and uniqueness
-async function getSmartQuestion(type: 'multiple_choice' | 'integer', gameId: number) {
+// Random question selection from database with uniqueness tracking
+async function getRandomQuestion(type: 'multiple_choice' | 'integer', gameId: number) {
   const game = await storage.getGameById(gameId);
   if (!game) throw new Error('Game not found');
   
+  // Get previously used question IDs for this game
   const usedQuestions = (game.usedQuestions as string[]) || [];
-  const categoryProgress = (game.categoryProgress as Record<string, number>) || {};
+  const usedQuestionIds = usedQuestions.map(id => parseInt(id)).filter(id => !isNaN(id));
   
-  // Get question from database
-  const question = await storage.getRandomQuestionByType(type);
+  // Get random question from database, excluding used ones
+  const question = await storage.getRandomQuestionByType(type, usedQuestionIds);
   if (!question) {
     throw new Error(`No ${type} questions available in database`);
   }
   
-  // Track usage and update category progress
+  // Track this question as used
   const newUsedQuestions = [...usedQuestions, question.id.toString()];
-  const newCategoryProgress = { ...categoryProgress };
-  newCategoryProgress[question.category] = (newCategoryProgress[question.category] || 0) + 1;
-  
   await storage.updateGame(gameId, {
-    usedQuestions: newUsedQuestions,
-    categoryProgress: newCategoryProgress
+    usedQuestions: newUsedQuestions
   });
+  
+  console.log(`Selected question ${question.id} (${type}): "${question.text.substring(0, 50)}..."`);
   
   return {
     id: question.id.toString(),
@@ -352,7 +351,7 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
   }
   
   // No winner yet, prepare and pre-load next round
-  const nextQuestionData = await getSmartQuestion('multiple_choice', gameId);
+  const nextQuestionData = await getRandomQuestion('multiple_choice', gameId);
   
   // Start next round immediately after current results display ends
   console.log(`Starting next round (${round + 1})...`);
@@ -394,9 +393,9 @@ async function finishGame(gameId: number, winnerId: number | null) {
 async function startQuestion(gameId: number, round: number, question: number) {
   console.log(`=== STARTING R${round}Q${question} ===`);
   
-  // Get smart question with fair category coverage
+  // Get random question from database
   const questionType = question === 1 ? 'multiple_choice' : 'integer';
-  const questionData = await getSmartQuestion(questionType, gameId);
+  const questionData = await getRandomQuestion(questionType, gameId);
   const deadline = new Date(Date.now() + 15000);
   
   await storage.updateGame(gameId, {

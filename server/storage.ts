@@ -30,7 +30,7 @@ export interface IStorage {
   updateRound(id: number, updates: Partial<Round>): Promise<Round | undefined>;
   
   // Questions
-  getRandomQuestionByType(type: string): Promise<Question | undefined>;
+  getRandomQuestionByType(type: string, excludeIds?: number[]): Promise<Question | undefined>;
   
   // Game state
   getGameState(id: number): Promise<any>;
@@ -233,7 +233,7 @@ export class MemStorage implements IStorage {
   }
 
   // Questions - Not needed for in-memory, uses hardcoded questions
-  async getRandomQuestionByType(type: string): Promise<Question | undefined> {
+  async getRandomQuestionByType(type: string, excludeIds: number[] = []): Promise<Question | undefined> {
     // This would use hardcoded questions for in-memory storage
     return undefined;
   }
@@ -397,10 +397,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Questions
-  async getRandomQuestionByType(type: string): Promise<Question | undefined> {
+  async getRandomQuestionByType(type: string, excludeIds: number[] = []): Promise<Question | undefined> {
     const result = await this.db.select().from(questions).where(eq(questions.type, type));
     if (result.length === 0) return undefined;
-    return result[Math.floor(Math.random() * result.length)];
+    
+    // Filter out already used questions
+    const availableQuestions = result.filter(q => !excludeIds.includes(q.id));
+    
+    // If no unused questions available, reset and use all questions again
+    if (availableQuestions.length === 0) {
+      return result[Math.floor(Math.random() * result.length)];
+    }
+    
+    return availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
   }
 }
 
