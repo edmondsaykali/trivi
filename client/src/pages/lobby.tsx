@@ -30,12 +30,10 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
       setIsTransitioning(true);
-      setTimeout(() => {
-        setLocation(`/game/${gameId}`);
-      }, 100); // Small delay to ensure state is updated
+      setLocation(`/game/${gameId}`);
     } else if (gameState?.game.status === 'finished') {
-      // Don't redirect to results from lobby, but log for debugging
-      console.log('Game finished before starting - checking if this is expected');
+      // Don't redirect to results from lobby
+      console.error('Game finished before starting - something went wrong');
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
@@ -43,21 +41,16 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (!gameState) return;
     
-    // Only check for closed lobby if game status is 'finished' and we never started transitioning
-    // This prevents false positives when game properly transitions to 'playing'
+    // If game finished while in lobby, host must have left
     if (gameState.game.status === 'finished' && !isStarting && !isTransitioning) {
-      // Additional check: make sure we're still in lobby and not already in game
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('/lobby/')) {
-        toast({
-          title: "Lobby Closed",
-          description: "The host has closed this lobby.",
-        });
-        setTimeout(() => {
-          setLocation('/');
-        }, 2000);
-        return;
-      }
+      toast({
+        title: "Lobby Closed",
+        description: "The host has closed this lobby.",
+      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 2000);
+      return;
     }
     
     const lobbyKey = `trivi-lobby-${gameId}`;
@@ -67,8 +60,8 @@ export default function Lobby({ params }: LobbyProps) {
     // Update stored player count
     sessionStorage.setItem(lobbyKey, currentPlayerCount.toString());
     
-    // Only show message if player count decreased (someone left) and we're the host and game is still waiting
-    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator && !isStarting && !isTransitioning) {
+    // Only show message if player count decreased (someone left) and we're the host
+    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator) {
       toast({
         title: "Player Left",
         description: "The other player has left the lobby.",
@@ -228,15 +221,18 @@ export default function Lobby({ params }: LobbyProps) {
 
         {/* Start Button */}
         {canStart && (
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-3">
+            {/* Small logo similar to home page */}
+            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: '#F97316' }}>
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-white rounded-full"></div>
+              </div>
+            </div>
             <Button
               onClick={startGame}
               disabled={isStarting}
-              className="py-3 px-8 rounded-xl font-medium text-lg flex items-center gap-2"
+              className="py-3 px-8 rounded-xl font-medium text-lg"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="5,3 19,12 5,21" fill="currentColor"/>
-              </svg>
               {isStarting ? 'Starting...' : 'Start Game'}
             </Button>
           </div>

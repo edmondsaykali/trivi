@@ -241,11 +241,11 @@ export default function Game({ params }: GameProps) {
               variant="ghost"
               size="sm"
               onClick={() => setShowExitConfirm(true)}
-              className="p-3"
+              className="p-2"
             >
-              <Home className="w-6 h-6" />
+              <Home className="w-4 h-4" />
             </Button>
-            <div className="text-base text-muted-foreground font-medium">
+            <div className="text-sm text-muted-foreground">
               Round {game.currentRound}
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function Game({ params }: GameProps) {
             <div className="text-center space-y-2">
               <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
               {question.type === 'integer' && (
-                <p className="text-muted-foreground text-xs">Your answer</p>
+                <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
               )}
             </div>
           </div>
@@ -289,8 +289,6 @@ export default function Game({ params }: GameProps) {
                   className={`w-full text-left p-4 border-2 rounded-xl transition-all group ${
                     selectedAnswer === index
                       ? 'border-primary bg-primary/5'
-                      : selectedAnswer !== null && selectedAnswer !== index
-                      ? 'border-muted bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                       : hasAnswered
                       ? 'border-muted bg-muted/50 cursor-not-allowed'
                       : 'border-border hover:border-primary hover:bg-primary/5'
@@ -314,8 +312,7 @@ export default function Game({ params }: GameProps) {
                   value={integerAnswer}
                   onChange={(e) => setIntegerAnswer(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === 'Done') {
-                      e.preventDefault();
+                    if (e.key === 'Enter') {
                       handleIntegerSubmit();
                     }
                   }}
@@ -327,8 +324,7 @@ export default function Game({ params }: GameProps) {
               <Button
                 onClick={handleIntegerSubmit}
                 disabled={!integerAnswer || hasAnswered || isSubmitting}
-                className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all shadow-lg"
-                style={{ backgroundColor: '#F97316', color: 'white' }}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-green-500/90 hover:to-green-600/90 transition-all shadow-lg"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Answer'}
               </Button>
@@ -348,15 +344,16 @@ export default function Game({ params }: GameProps) {
 
       {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <AlertDialogContent className="w-80">
+        <AlertDialogContent>
           <AlertDialogHeader>
+            <AlertDialogTitle>Leave Game?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to leave?
+              Are you sure you want to leave? This will end the game and your opponent will win.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2">
-            <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setLocation('/')} className="flex-1">
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay in Game</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setLocation('/')}>
               Leave Game
             </AlertDialogAction>
           </AlertDialogFooter>
