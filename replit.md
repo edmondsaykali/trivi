@@ -79,6 +79,16 @@ Preferred communication style: Simple, everyday language.
 - Server-side deadline enforcement prevents client manipulation
 - State changes immediately reflected across all connected clients
 
+## Recent Changes (July 25, 2025)
+
+### UI Polish & Error Handling Improvements (July 25)
+- ✅ **FIXED: Lobby transition synchronization** - Added session storage flags to prevent false "host closed lobby" messages
+- ✅ **ENHANCED: Error messaging** - All errors now show as subtle red text instead of popup boxes
+- ✅ **IMPROVED: Mobile integer input** - Enter/Done key submits answers, reduced font size for mobile
+- ✅ **SIMPLIFIED: Integer questions** - Removed unnecessary instructional text and labels
+- ✅ **REFINED: Results display** - "Correct Answer:" label appears above green-colored answer for clarity
+- ✅ **ADDED: Subtle time's up message** - Red text appears briefly instead of blocking popup
+
 ## Recent Changes (July 24, 2025)
 
 ### Player Disconnection & Lobby Fixes (July 24)

@@ -30,6 +30,8 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
       setIsTransitioning(true);
+      // Mark that we've transitioned to prevent false positives
+      sessionStorage.setItem(`trivi-transitioned-${gameId}`, 'true');
       // Clear the lobby key to prevent incorrect player count comparisons
       sessionStorage.removeItem(`trivi-lobby-${gameId}`);
       setLocation(`/game/${gameId}`);
@@ -42,6 +44,10 @@ export default function Lobby({ params }: LobbyProps) {
   // Check if game was closed or player left
   useEffect(() => {
     if (!gameState) return;
+    
+    // Check if we've already transitioned or are in the process
+    const hasTransitioned = sessionStorage.getItem(`trivi-transitioned-${gameId}`) === 'true';
+    if (hasTransitioned) return;
     
     // Only show "lobby closed" if game finished before it started (in waiting status)
     // If the game is playing or was playing, don't show this message
@@ -114,8 +120,10 @@ export default function Lobby({ params }: LobbyProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Check if we've transitioned before leaving
+      const hasTransitioned = sessionStorage.getItem(`trivi-transitioned-${gameId}`) === 'true';
       // Call leave immediately during cleanup, before any state changes
-      if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting) {
+      if (gameState?.game.status === 'waiting' && !isTransitioning && !isStarting && !hasTransitioned) {
         handleLeavePage();
       }
     };
