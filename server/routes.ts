@@ -205,7 +205,7 @@ async function getSmartQuestion(type: 'multiple_choice' | 'integer', gameId: num
     return acc;
   }, {} as Record<string, number>);
   
-  const minUsage = Math.min(...Object.values(categoryUsage));
+  const minUsage = Object.values(categoryUsage).length > 0 ? Math.min(...Object.values(categoryUsage)) : 0;
   const preferredQuestions = availableQuestions.filter(q => 
     (categoryProgress[q.category] || 0) === minUsage
   );
@@ -596,6 +596,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         questionDeadline: null,
         lastRoundWinnerId: null,
         waitingForAnswers: false,
+        usedQuestions: [],
+        categoryProgress: {},
       });
       
       const player = await storage.createPlayer({

@@ -81,6 +81,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 25, 2025)
 
+### Advanced Question Management System (July 25 - Latest)
+- ✅ **IMPLEMENTED: Smart question selection** - Questions now use fair category coverage ensuring balanced gameplay
+- ✅ **ADDED: Question uniqueness tracking** - No question appears twice in the same game for better player experience  
+- ✅ **ENHANCED: Category balancing** - Every category appears before any repeats, maintaining diverse question types
+- ✅ **UPDATED: Results display timing** - Reduced from 5 seconds to 4 seconds for faster game flow
+- ✅ **IMPROVED: Answer storage** - Questions now store ID, text, and correct answers for comprehensive game history
+- ✅ **ADDED: Game state tracking** - usedQuestions and categoryProgress fields track question selection patterns
+
 ### Critical Bug Fixes & Performance Improvements (July 25)
 - ✅ **FIXED: Critical Q1 round completion bug** - Players answering Q1 correctly now properly win the round instead of continuing to Q2
 - ✅ **FIXED: Major performance issue** - Switched from slow database connection to memory storage (reduced response times from 10+ seconds to milliseconds)

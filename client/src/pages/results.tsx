@@ -68,13 +68,14 @@ export default function Results({ params }: ResultsProps) {
         const player1Answer = answers.find(a => a.playerId === currentPlayer?.id);
         const player2Answer = answers.find(a => a.playerId === opponent?.id);
         
-        // Create history entry
+        // Create history entry with actual question text if available
+        const questionText = player1Answer?.questionText || player2Answer?.questionText || `Round ${round} - Question ${question}`;
         history.push({
           round,
           question,
-          questionText: `Round ${round} - Question ${question}`,
+          questionText,
           questionType: isMultipleChoice ? 'multiple_choice' : 'integer',
-          correctAnswer: 'Unknown', // We don't have this stored yet
+          correctAnswer: player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown',
           player1Answer: player1Answer?.answer || 'no_answer',
           player2Answer: player2Answer?.answer || 'no_answer',
           player1Correct: false, // Will be determined by game logic
@@ -185,8 +186,6 @@ export default function Results({ params }: ResultsProps) {
             <h2 className="text-lg font-semibold text-foreground mb-4">Game History</h2>
             <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
               {gameHistory.map((item, idx) => {
-                const currentPlayerAnswer = item.answers?.find(a => a.playerId === currentPlayer.id);
-                const opponentAnswer = item.answers?.find(a => a.playerId === opponent.id);
                 
                 return (
                   <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
@@ -215,25 +214,25 @@ export default function Results({ params }: ResultsProps) {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{currentPlayer.name}</span>
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          currentPlayerAnswer?.answer === 'no_answer' 
+                          item.player1Answer === 'no_answer' 
                             ? 'bg-gray-100 text-gray-600' 
-                            : item.roundWinner === currentPlayer.id
+                            : item.player1Correct
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {currentPlayerAnswer?.answer === 'no_answer' ? 'No answer' : currentPlayerAnswer?.answer || 'N/A'}
+                          {item.player1Answer === 'no_answer' ? 'No answer' : item.player1Answer}
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{opponent.name}</span>
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          opponentAnswer?.answer === 'no_answer' 
+                          item.player2Answer === 'no_answer' 
                             ? 'bg-gray-100 text-gray-600' 
-                            : item.roundWinner === opponent.id
+                            : item.player2Correct
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {opponentAnswer?.answer === 'no_answer' ? 'No answer' : opponentAnswer?.answer || 'N/A'}
+                          {item.player2Answer === 'no_answer' ? 'No answer' : item.player2Answer}
                         </div>
                       </div>
                     </div>
