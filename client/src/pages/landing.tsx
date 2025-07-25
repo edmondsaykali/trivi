@@ -136,7 +136,7 @@ export default function Landing() {
             ref={nameInputRef}
             id="username"
             type="text"
-            placeholder="Enter your name"
+            placeholder="Enter your name to start"
             value={username}
             onChange={(e) => {
               if (e.target.value.length <= 10) {

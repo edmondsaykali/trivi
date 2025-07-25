@@ -32,8 +32,8 @@ interface QuestionResultsModalProps {
   opponent: Player;
 }
 
-// Component to show results after each question
-function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionResultsModalProps) {
+// Component to show results inline within the same card
+function InlineResultsDisplay({ gameState, currentPlayer, opponent }: QuestionResultsModalProps) {
   const { game } = gameState;
   const [answers, setAnswers] = useState<any[]>([]);
   
@@ -54,14 +54,154 @@ function QuestionResultsModal({ gameState, currentPlayer, opponent }: QuestionRe
     fetchAnswers();
   }, [game.id, game.currentRound, game.currentQuestion]);
   
-  // Use the ResultsDisplay component
+  const question = game.questionData as Question;
+  
+  if (!question) return null;
+  
+  const currentPlayerAnswer = answers.find(a => a.playerId === currentPlayer.id);
+  const opponentAnswer = answers.find(a => a.playerId === opponent.id);
+  
+  if (question.type === 'multiple_choice') {
+    const correctIndex = typeof question.correct === 'number'
+      ? question.correct
+      : question.options?.findIndex((opt) => opt === String(question.correct)) ?? -1;
+    
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold text-foreground">Question Results</h2>
+          <p className="text-muted-foreground">{question.text}</p>
+        </div>
+
+        {/* Show both players' answers */}
+        <div className="space-y-3">
+          {[
+            { player: currentPlayer, answer: currentPlayerAnswer, label: "You" },
+            { player: opponent, answer: opponentAnswer, label: opponent.name }
+          ].map(({ player, answer, label }) => {
+            const selectedIndex = answer ? parseInt(answer.answer) : -1;
+            const isCorrect = selectedIndex === correctIndex;
+            const answerText = selectedIndex >= 0 && question.options ? question.options[selectedIndex] : 'No answer';
+            
+            return (
+              <div key={player.id} className="flex items-center justify-between">
+                <span className="font-medium text-foreground">{label}</span>
+                <div className={`px-3 py-1 rounded text-sm font-medium ${
+                  !answer || answer.answer === 'no_answer' 
+                    ? 'bg-gray-100 text-gray-600' 
+                    : isCorrect 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                }`}>
+                  {answerText}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Show correct answer */}
+        <div className="text-center space-y-1">
+          <p className="text-sm text-muted-foreground">Correct Answer:</p>
+          <p className="text-base font-semibold text-green-600">{question.options?.[correctIndex] || question.correct}</p>
+        </div>
+
+        {/* Round result for Q1 */}
+        {game.currentQuestion === 1 && game.lastRoundWinnerId && (
+          <div className="text-center p-4 bg-primary/10 rounded-lg">
+            <h3 className="font-bold text-primary">
+              {game.lastRoundWinnerId === currentPlayer.id ? 'You win' : `${opponent.name} wins`} the round!
+            </h3>
+          </div>
+        )}
+
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            {game.currentQuestion === 1 && !game.lastRoundWinnerId 
+              ? 'Moving to Question 2...' 
+              : 'Next round starting...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Integer question results
+  const correctAnswer = typeof question.correct === 'number' ? question.correct : parseInt(question.correct as string);
+  const playerAnswers = [
+    { player: currentPlayer, answer: currentPlayerAnswer, label: "You" },
+    { player: opponent, answer: opponentAnswer, label: opponent.name }
+  ];
+  
+  // Determine who won
+  const winnerId = game.lastRoundWinnerId;
+  
   return (
-    <ResultsDisplay 
-      gameState={gameState} 
-      currentPlayer={currentPlayer} 
-      opponent={opponent} 
-      answers={answers} 
-    />
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-bold text-foreground">Round {game.currentRound} Complete!</h2>
+        <p className="text-muted-foreground">{question.text}</p>
+      </div>
+
+      {/* Show both players' answers */}
+      <div className="space-y-3">
+        {playerAnswers.map(({ player, answer, label }) => {
+          const userAnswer = answer ? answer.answer : 'no_answer';
+          const isWinner = player.id === winnerId;
+          const isExact = userAnswer !== 'no_answer' && parseInt(userAnswer) === correctAnswer;
+          
+          // Calculate elapsed time instead of timestamp
+          let elapsedTime = null;
+          if (answer && answer.submittedAt && game.questionDeadline) {
+            const submitTime = new Date(answer.submittedAt).getTime();
+            const questionStartTime = new Date(game.questionDeadline).getTime() - 15000; // 15 seconds before deadline
+            const elapsed = Math.round((submitTime - questionStartTime) / 1000);
+            if (elapsed > 0 && elapsed <= 15) {
+              elapsedTime = `${elapsed}s`;
+            }
+          }
+          
+          return (
+            <div key={player.id} className="flex items-center justify-between">
+              <span className="font-medium text-foreground">{label}</span>
+              <div className="flex items-center space-x-2">
+                <div className={`px-3 py-1 rounded text-sm font-medium ${
+                  userAnswer === 'no_answer' 
+                    ? 'bg-gray-100 text-gray-600' 
+                    : isWinner 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                }`}>
+                  {userAnswer === 'no_answer' ? 'No answer' : userAnswer}
+                </div>
+                {elapsedTime && (
+                  <span className="text-xs text-muted-foreground">({elapsedTime})</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Show correct answer */}
+      <div className="text-center space-y-1">
+        <p className="text-sm text-muted-foreground">Correct Answer:</p>
+        <p className="text-base font-semibold text-green-600">{correctAnswer}</p>
+      </div>
+
+      {/* Round winner */}
+      {winnerId && (
+        <div className="text-center p-4 bg-primary/10 rounded-lg">
+          <h3 className="font-bold text-primary">
+            {winnerId === currentPlayer.id ? 'You win' : `${opponent.name} wins`} the round!
+          </h3>
+        </div>
+      )}
+
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground">Next round starting...</p>
+      </div>
+    </div>
   );
 }
 
@@ -216,10 +356,8 @@ export default function Game({ params }: GameProps) {
     );
   }
 
-  // Show results when game status is showing_results
-  if (gameState.game.status === 'showing_results' && currentPlayer && opponent) {
-    return <QuestionResultsModal gameState={gameState} currentPlayer={currentPlayer} opponent={opponent} />;
-  }
+  // Show results inline when game status is showing_results
+  const showingResults = gameState.game.status === 'showing_results';
   
   // Redirect to final results page when game is finished
   if (gameState.game.status === 'finished') {
@@ -272,20 +410,24 @@ export default function Game({ params }: GameProps) {
           </div>
         </div>
 
-        {/* Question Card */}
+        {/* Question/Results Card */}
         <div className="bg-card rounded-2xl p-6 shadow-lg border space-y-6">
-          <div className="space-y-4">
-            {/* Integrated Timer Bar */}
-            <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden border border-border">
-              <TimerBar deadline={game.questionDeadline || null} minimal />
+          {!showingResults ? (
+            <div className="space-y-4">
+              {/* Integrated Timer Bar */}
+              <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden border border-border">
+                <TimerBar deadline={game.questionDeadline || null} minimal />
+              </div>
+              
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
+              </div>
             </div>
-            
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
-            </div>
-          </div>
+          ) : (
+            <InlineResultsDisplay gameState={gameState} currentPlayer={currentPlayer!} opponent={opponent!} />
+          )}
 
-          {question.type === 'multiple_choice' && question.options ? (
+          {!showingResults && question.type === 'multiple_choice' && question.options ? (
             <div className="space-y-3">
               {question.options.map((option, index) => (
                 <button
@@ -310,7 +452,7 @@ export default function Game({ params }: GameProps) {
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !showingResults ? (
             <div className="space-y-6">
               <div className="max-w-xs mx-auto">
                 <Input
@@ -342,7 +484,7 @@ export default function Game({ params }: GameProps) {
                 <p id="integer-error" className="text-red-500 text-sm text-center hidden"></p>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Answer Status */}

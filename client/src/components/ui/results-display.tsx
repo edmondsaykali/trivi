@@ -19,9 +19,9 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   const opponentAnswer = answers.find(a => a.playerId === opponent.id);
   
   if (question.type === 'multiple_choice') {
-    const correctIndex = typeof question.correct === 'string' 
-      ? question.options?.findIndex((opt) => opt === question.correct) ?? -1
-      : (question.correct as number);
+    const correctIndex = typeof question.correct === 'number'
+      ? question.correct
+      : question.options?.findIndex((opt) => opt === String(question.correct)) ?? -1;
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
