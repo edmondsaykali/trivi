@@ -1,8 +1,7 @@
 import { games, players, answers, rounds, questions, type Game, type Player, type Answer, type Round, type Question, type InsertGame, type InsertPlayer, type InsertAnswer, type InsertRound } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-const { Pool } = pg;
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 export interface IStorage {
   // Games
@@ -238,25 +237,23 @@ export class MemStorage implements IStorage {
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
-  private db: ReturnType<typeof drizzle>;
-
-  private pool: InstanceType<typeof Pool>;
+  private db: ReturnType<typeof drizzle<any>>;
+  private sql: ReturnType<typeof postgres>;
   
   constructor() {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL environment variable is required");
     }
     
-    // Initialize with PostgreSQL connection pool for Supabase compatibility
-    this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 10, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+    // Initialize with postgres.js for WebContainer compatibility
+    this.sql = postgres(process.env.DATABASE_URL, {
+      ssl: 'require',
+      max: 1,
+      idle_timeout: 20,
+      connect_timeout: 10,
     });
     
-    this.db = drizzle(this.pool);
+    this.db = drizzle(this.sql);
   }
 
   // Helper method for retry logic
@@ -410,15 +407,15 @@ async function initializeDatabase() {
   }
 
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+    const sql = postgres(process.env.DATABASE_URL, {
+      ssl: 'require',
+      max: 1,
     });
     
-    const client = await pool.connect();
+    const db = drizzle(sql);
     
     // Create tables if they don't exist
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS games (
         id SERIAL PRIMARY KEY,
         code TEXT NOT NULL UNIQUE,
@@ -433,9 +430,9 @@ async function initializeDatabase() {
         last_round_winner_id INTEGER,
         waiting_for_answers BOOLEAN DEFAULT false
       )
-    `);
+    `;
 
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS players (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -445,9 +442,9 @@ async function initializeDatabase() {
         session_id TEXT NOT NULL,
         joined_at TIMESTAMP DEFAULT NOW() NOT NULL
       )
-    `);
+    `;
 
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS answers (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -458,9 +455,9 @@ async function initializeDatabase() {
         submitted_at TIMESTAMP DEFAULT NOW() NOT NULL,
         is_correct BOOLEAN
       )
-    `);
+    `;
 
-    await client.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS rounds (
         id SERIAL PRIMARY KEY,
         game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -470,10 +467,9 @@ async function initializeDatabase() {
         question2_data JSONB,
         completed_at TIMESTAMP
       )
-    `);
+    `;
 
-    client.release();
-    await pool.end();
+    await sql.end();
 
     console.log("✅ Database tables initialized successfully");
     return true;
