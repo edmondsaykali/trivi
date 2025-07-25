@@ -398,18 +398,28 @@ export class DatabaseStorage implements IStorage {
 
   // Questions
   async getRandomQuestionByType(type: string, excludeIds: number[] = []): Promise<Question | undefined> {
+    console.log(`Querying database for type: ${type}`);
     const result = await this.db.select().from(questions).where(eq(questions.type, type));
-    if (result.length === 0) return undefined;
+    console.log(`Found ${result.length} questions of type ${type}`);
+    
+    if (result.length === 0) {
+      console.error(`No questions found for type: ${type}`);
+      return undefined;
+    }
     
     // Filter out already used questions
     const availableQuestions = result.filter(q => !excludeIds.includes(q.id));
+    console.log(`Available questions after filtering: ${availableQuestions.length}`);
     
     // If no unused questions available, reset and use all questions again
     if (availableQuestions.length === 0) {
+      console.log('No unused questions, selecting from all questions');
       return result[Math.floor(Math.random() * result.length)];
     }
     
-    return availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+    const selected = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+    console.log(`Selected question ID: ${selected.id}`);
+    return selected;
   }
 }
 
@@ -441,7 +451,9 @@ async function initializeDatabase() {
         question_data JSONB,
         question_deadline TIMESTAMP,
         last_round_winner_id INTEGER,
-        waiting_for_answers BOOLEAN DEFAULT false
+        waiting_for_answers BOOLEAN DEFAULT false,
+        used_questions JSONB DEFAULT '[]'::jsonb,
+        category_progress JSONB DEFAULT '{}'::jsonb
       )
     `;
 
@@ -482,6 +494,10 @@ async function initializeDatabase() {
       )
     `;
 
+    // Add missing columns to existing games table
+    await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS used_questions JSONB DEFAULT '[]'::jsonb`;
+    await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS category_progress JSONB DEFAULT '{}'::jsonb`;
+
     await sql.end();
 
     console.log("✅ Database tables initialized successfully");
@@ -492,8 +508,8 @@ async function initializeDatabase() {
   }
 }
 
-// Switch to memory storage for better performance
-export const storage = new MemStorage();
+// Use PostgreSQL storage for database access
+export const storage = new DatabaseStorage();
 
 // Initialize database tables on startup (non-blocking)
 let databaseReady = false;

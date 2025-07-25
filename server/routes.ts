@@ -33,7 +33,7 @@ function getRandomAvatar(): string {
 }
 
 // Random question selection from database with uniqueness tracking
-async function getRandomQuestion(type: 'multiple_choice' | 'integer', gameId: number) {
+async function getRandomQuestion(type: 'multiple_choice' | 'input_based', gameId: number) {
   const game = await storage.getGameById(gameId);
   if (!game) throw new Error('Game not found');
   
@@ -42,8 +42,10 @@ async function getRandomQuestion(type: 'multiple_choice' | 'integer', gameId: nu
   const usedQuestionIds = usedQuestions.map(id => parseInt(id)).filter(id => !isNaN(id));
   
   // Get random question from database, excluding used ones
+  console.log(`Looking for ${type} questions, excluding IDs: [${usedQuestionIds.join(', ')}]`);
   const question = await storage.getRandomQuestionByType(type, usedQuestionIds);
   if (!question) {
+    console.error(`Failed to find ${type} questions in database`);
     throw new Error(`No ${type} questions available in database`);
   }
   
@@ -394,7 +396,7 @@ async function startQuestion(gameId: number, round: number, question: number) {
   console.log(`=== STARTING R${round}Q${question} ===`);
   
   // Get random question from database
-  const questionType = question === 1 ? 'multiple_choice' : 'integer';
+  const questionType = question === 1 ? 'multiple_choice' : 'input_based';
   const questionData = await getRandomQuestion(questionType, gameId);
   const deadline = new Date(Date.now() + 15000);
   
