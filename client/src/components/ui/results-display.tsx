@@ -21,11 +21,11 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   if (question.type === 'multiple_choice') {
     const correctIndex = typeof question.correct === 'string' 
       ? question.options?.findIndex((opt) => opt === question.correct) ?? -1
-      : question.correct;
+      : (question.correct as number);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-bold text-foreground">Question Results</h2>
             <p className="text-muted-foreground">{question.text}</p>
@@ -96,8 +96,8 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   const winnerId = game.lastRoundWinnerId;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-foreground">Round {game.currentRound} Complete!</h2>
           <p className="text-muted-foreground">{question.text}</p>

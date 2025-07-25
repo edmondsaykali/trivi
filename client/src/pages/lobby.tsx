@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useGameState } from '@/hooks/use-game-state';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Play } from 'lucide-react';
 
 interface LobbyProps {
   params: { id: string };
@@ -221,21 +221,14 @@ export default function Lobby({ params }: LobbyProps) {
 
         {/* Start Button */}
         {canStart && (
-          <div className="flex justify-center items-center gap-3">
-            {/* Small logo similar to home page */}
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: '#F97316' }}>
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-4 h-4 bg-white rounded-full"></div>
-              </div>
-            </div>
-            <Button
-              onClick={startGame}
-              disabled={isStarting}
-              className="py-3 px-8 rounded-xl font-medium text-lg"
-            >
-              {isStarting ? 'Starting...' : 'Start Game'}
-            </Button>
-          </div>
+          <Button
+            onClick={startGame}
+            disabled={isStarting}
+            className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-5 h-5" />
+            {isStarting ? 'Starting...' : 'Start Game'}
+          </Button>
         )}
         
         {!isCreator && players.length === 2 && (
