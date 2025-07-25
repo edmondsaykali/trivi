@@ -401,22 +401,37 @@ async function processGame(gameId: number) {
 }
 
 function evaluateMultipleChoice(questionData: any, answers: any[], players: any[]): { correctCount: number, winner: number | null } {
-  // The correct field already contains the correct index
+  // Get the correct answer text
   const correctIndex = questionData.correct;
+  const correctAnswerText = questionData.options ? questionData.options[correctIndex] : correctIndex.toString();
   
   // Check each player's answer
   const playerAnswers = players.map(player => {
     const answer = answers.find(a => a.playerId === player.id);
+    const playerAnswer = answer ? answer.answer : 'no_answer';
+    
+    // For backwards compatibility, check both text and numeric answers
+    let isCorrect = false;
+    if (playerAnswer !== 'no_answer') {
+      // Check if answer matches the correct text
+      isCorrect = playerAnswer === correctAnswerText;
+      
+      // Fallback: check if it's a numeric answer that matches the correct index
+      if (!isCorrect && !isNaN(parseInt(playerAnswer))) {
+        isCorrect = parseInt(playerAnswer) === correctIndex;
+      }
+    }
+    
     return {
       playerId: player.id,
-      answer: answer ? answer.answer : 'no_answer',
-      isCorrect: answer && parseInt(answer.answer) === correctIndex
+      answer: playerAnswer,
+      isCorrect
     };
   });
   
   const correctAnswers = playerAnswers.filter(pa => pa.isCorrect);
   
-  console.log(`Q1 evaluation: correctIndex=${correctIndex}, playerAnswers:`, playerAnswers.map(pa => `Player ${pa.playerId}: ${pa.answer} (${pa.isCorrect ? 'correct' : 'wrong'})`));
+  console.log(`Q1 evaluation: correctIndex=${correctIndex}, correctText="${correctAnswerText}", playerAnswers:`, playerAnswers.map(pa => `Player ${pa.playerId}: ${pa.answer} (${pa.isCorrect ? 'correct' : 'wrong'})`));
   
   return {
     correctCount: correctAnswers.length,
