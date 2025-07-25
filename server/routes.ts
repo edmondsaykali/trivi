@@ -1,11 +1,18 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, databaseReady } from "./storage";
-import { insertGameSchema, insertPlayerSchema, insertAnswerSchema, Answer } from "@shared/schema";
+import { insertGameSchema, insertPlayerSchema, insertAnswerSchema, Answer, Question } from "@shared/schema";
 import { z } from "zod";
 
 // Game configuration
 const ROUNDS_TO_WIN = 5; // First to 5 rounds wins
+
+// In-memory cache for game questions
+const gameQuestionsCache = new Map<number, {
+  multipleChoice: any[];
+  inputBased: any[];
+  currentIndex: { mc: number; ib: number };
+}>();
 
 function generateGameCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -32,39 +39,60 @@ function getRandomAvatar(): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-// Random question selection from database with uniqueness tracking
-async function getRandomQuestion(type: 'multiple_choice' | 'input_based', gameId: number) {
-  const game = await storage.getGameById(gameId);
-  if (!game) throw new Error('Game not found');
+// Pre-fetch all questions for a game
+async function prefetchGameQuestions(gameId: number) {
+  console.log(`Pre-fetching questions for game ${gameId}...`);
   
-  // Get previously used question IDs for this game
-  const usedQuestions = (game.usedQuestions as string[]) || [];
-  const usedQuestionIds = usedQuestions.map(id => parseInt(id)).filter(id => !isNaN(id));
+  // Fetch 11 multiple choice and 11 input based questions
+  const multipleChoiceQuestions = await storage.getRandomQuestionsBatch('multiple_choice', 11);
+  const inputBasedQuestions = await storage.getRandomQuestionsBatch('input_based', 11);
   
-  // Get random question from database, excluding used ones
-  console.log(`Looking for ${type} questions, excluding IDs: [${usedQuestionIds.join(', ')}]`);
-  const question = await storage.getRandomQuestionByType(type, usedQuestionIds);
-  if (!question) {
-    console.error(`Failed to find ${type} questions in database`);
-    throw new Error(`No ${type} questions available in database`);
-  }
-  
-  // Track this question as used
-  const newUsedQuestions = [...usedQuestions, question.id.toString()];
-  await storage.updateGame(gameId, {
-    usedQuestions: newUsedQuestions
+  // Store in cache
+  gameQuestionsCache.set(gameId, {
+    multipleChoice: multipleChoiceQuestions.map((q: Question) => ({
+      id: q.id.toString(),
+      text: q.text,
+      options: q.options as string[] || undefined,
+      correct: q.correctAnswer,
+      category: q.category,
+      type: q.type
+    })),
+    inputBased: inputBasedQuestions.map((q: Question) => ({
+      id: q.id.toString(),
+      text: q.text,
+      options: null,
+      correct: q.correctAnswer,
+      category: q.category,
+      type: q.type
+    })),
+    currentIndex: { mc: 0, ib: 0 }
   });
   
-  console.log(`Selected question ${question.id} (${type}): "${question.text.substring(0, 50)}..."`);
+  console.log(`Cached ${multipleChoiceQuestions.length} MC and ${inputBasedQuestions.length} IB questions`);
+}
+
+// Get next question from cache
+function getNextCachedQuestion(gameId: number, type: 'multiple_choice' | 'input_based') {
+  const cache = gameQuestionsCache.get(gameId);
+  if (!cache) {
+    throw new Error('No questions cached for this game');
+  }
   
-  return {
-    id: question.id.toString(),
-    text: question.text,
-    options: question.options as string[] || undefined,
-    correct: question.correctAnswer,
-    category: question.category,
-    type: question.type
-  };
+  if (type === 'multiple_choice') {
+    const question = cache.multipleChoice[cache.currentIndex.mc];
+    cache.currentIndex.mc++;
+    return question;
+  } else {
+    const question = cache.inputBased[cache.currentIndex.ib];
+    cache.currentIndex.ib++;
+    return question;
+  }
+}
+
+// Clean up cache when game ends
+function cleanupGameCache(gameId: number) {
+  gameQuestionsCache.delete(gameId);
+  console.log(`Cleaned up question cache for game ${gameId}`);
 }
 
 function generateSessionId(): string {
@@ -182,8 +210,8 @@ async function processGame(gameId: number) {
   if (shouldContinueToQ2) {
     console.log(`Q1 results - showing for 4 seconds before Q2...`);
     
-    // Pre-load next question data with random selection
-    const nextQuestionData = await getRandomQuestion('input_based', gameId);
+    // Pre-load next question data from cache
+    const nextQuestionData = getNextCachedQuestion(gameId, 'input_based');
     
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
@@ -353,7 +381,7 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
   }
   
   // No winner yet, prepare and pre-load next round
-  const nextQuestionData = await getRandomQuestion('multiple_choice', gameId);
+  const nextQuestionData = getNextCachedQuestion(gameId, 'multiple_choice');
   
   // Start next round immediately after current results display ends
   console.log(`Starting next round (${round + 1})...`);
@@ -390,14 +418,17 @@ async function finishGame(gameId: number, winnerId: number | null) {
   for (const player of players) {
     console.log(`${player.name}: ${player.score} rounds won`);
   }
+  
+  // Clean up cached questions
+  cleanupGameCache(gameId);
 }
 
 async function startQuestion(gameId: number, round: number, question: number) {
   console.log(`=== STARTING R${round}Q${question} ===`);
   
-  // Get random question from database
+  // Get question from cache
   const questionType = question === 1 ? 'multiple_choice' : 'input_based';
-  const questionData = await getRandomQuestion(questionType, gameId);
+  const questionData = getNextCachedQuestion(gameId, questionType);
   const deadline = new Date(Date.now() + 15000);
   
   await storage.updateGame(gameId, {
@@ -559,6 +590,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (players.length !== 2) {
         return res.status(400).json({ message: "Need 2 players to start" });
       }
+      
+      // Pre-fetch all questions for the game
+      console.log(`Pre-fetching questions for game ${gameId}`);
+      await prefetchGameQuestions(gameId);
       
       console.log(`Starting question for game ${gameId}`);
       await startQuestion(gameId, 1, 1);
@@ -769,6 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateGame(gameId, {
             status: 'finished'
           });
+          cleanupGameCache(gameId);
           console.log(`Game ${gameId}: Host ${leavingPlayer.name} left. Lobby closed.`);
         } else {
           // Non-host player leaves lobby - just remove them
@@ -776,7 +812,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Game ${gameId}: Player ${leavingPlayer.name} left the lobby.`);
         }
       } else if (game.status === 'playing' || game.status === 'showing_results') {
-        // During active game, just log the departure
+        // During active game, finish the game and clean up
+        await storage.updateGame(gameId, {
+          status: 'finished',
+          winnerId: remainingPlayer?.id || null
+        });
+        cleanupGameCache(gameId);
         console.log(`Game ${gameId}: Player ${leavingPlayer.name} left during game.`);
       }
       

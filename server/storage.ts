@@ -31,6 +31,7 @@ export interface IStorage {
   
   // Questions
   getRandomQuestionByType(type: string, excludeIds?: number[]): Promise<Question | undefined>;
+  getRandomQuestionsBatch(type: string, count: number): Promise<Question[]>;
   
   // Game state
   getGameState(id: number): Promise<any>;
@@ -339,6 +340,109 @@ export class MemStorage implements IStorage {
     
     return availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
   }
+
+  async getRandomQuestionsBatch(type: string, count: number): Promise<Question[]> {
+    const hardcodedQuestions: Question[] = [
+      // Multiple choice questions
+      {
+        id: 1,
+        text: "What is the capital of France?",
+        options: ["London", "Berlin", "Paris", "Madrid"],
+        correctAnswer: "Paris",
+        category: "Geography",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 2,
+        text: "Which planet is known as the Red Planet?",
+        options: ["Venus", "Mars", "Jupiter", "Saturn"],
+        correctAnswer: "Mars",
+        category: "Science",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 3,
+        text: "Who painted the Mona Lisa?",
+        options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Claude Monet"],
+        correctAnswer: "Leonardo da Vinci",
+        category: "Art",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 4,
+        text: "What is the largest ocean on Earth?",
+        options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+        correctAnswer: "Pacific Ocean",
+        category: "Geography",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 5,
+        text: "Which element has the chemical symbol 'O'?",
+        options: ["Gold", "Oxygen", "Silver", "Iron"],
+        correctAnswer: "Oxygen",
+        category: "Science",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      // Integer questions
+      {
+        id: 101,
+        text: "How many continents are there?",
+        options: null,
+        correctAnswer: "7",
+        category: "Geography",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 102,
+        text: "In what year did World War II end?",
+        options: null,
+        correctAnswer: "1945",
+        category: "History",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 103,
+        text: "How many sides does a hexagon have?",
+        options: null,
+        correctAnswer: "6",
+        category: "Mathematics",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 104,
+        text: "What is the freezing point of water in Celsius?",
+        options: null,
+        correctAnswer: "0",
+        category: "Science",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 105,
+        text: "How many players are on a basketball team on the court at one time?",
+        options: null,
+        correctAnswer: "5",
+        category: "Sports",
+        type: "input_based",
+        createdAt: new Date()
+      }
+    ];
+
+    const questionsOfType = hardcodedQuestions.filter(q => q.type === type);
+    
+    // For memory storage, just return all available questions
+    // In a real scenario, we'd have more questions
+    return questionsOfType.slice(0, Math.min(count, questionsOfType.length));
+  }
 }
 
 // Database Storage Implementation
@@ -522,6 +626,23 @@ export class DatabaseStorage implements IStorage {
     const selected = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
     console.log(`Selected question ID: ${selected.id}`);
     return selected;
+  }
+
+  async getRandomQuestionsBatch(type: string, count: number): Promise<Question[]> {
+    console.log(`Fetching batch of ${count} ${type} questions`);
+    const result = await this.db.select().from(questions).where(eq(questions.type, type));
+    console.log(`Found ${result.length} total ${type} questions in database`);
+    
+    if (result.length === 0) {
+      console.error(`No questions found for type: ${type}`);
+      return [];
+    }
+    
+    // Shuffle the array to get random questions
+    const shuffled = [...result].sort(() => Math.random() - 0.5);
+    
+    // Return requested count or all available if less
+    return shuffled.slice(0, Math.min(count, shuffled.length));
   }
 }
 

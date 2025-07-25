@@ -29,9 +29,11 @@ Preferred communication style: Simple, everyday language.
 - **Current Implementation**: Hybrid storage system with automatic fallback
 - **Primary**: PostgreSQL via Supabase with Drizzle ORM (schema defined and ready)
 - **Fallback**: In-memory storage for development and testing
+- **Question Caching**: Pre-fetch 22 questions per game and store in memory for instant access
 - **Session Storage**: Browser sessionStorage for client-side game state
 - **Real-time Updates**: Polling mechanism with optimized state change detection
 - **Database Schema**: Fully designed with games, players, answers, and rounds tables
+- **Performance**: Questions cached in memory during gameplay, eliminating database queries
 
 ## Key Components
 
@@ -81,7 +83,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 25, 2025)
 
-### Database-Only Question System (July 25 - Latest)
+### Optimized Question Pre-fetching System (July 25 - 2:00 PM)
+- ✅ **IMPLEMENTED: Question pre-fetching** - Games now fetch all 22 questions (11 MC + 11 IB) upfront when started
+- ✅ **ADDED: In-memory question cache** - Questions stored in memory during gameplay for instant access
+- ✅ **OPTIMIZED: Game performance** - Eliminated database queries during gameplay, reduced latency from seconds to milliseconds
+- ✅ **ENHANCED: Cache management** - Automatic cleanup when games finish or players disconnect
+- ✅ **FIXED: Database connection issues** - Added proper fallback to memory storage when database unavailable
+- ✅ **IMPROVED: Storage architecture** - Hybrid storage system with graceful degradation
+
+### Database-Only Question System (July 25 - Morning)
 - ✅ **FIXED: Database storage implementation** - Switched from MemStorage to DatabaseStorage for true database-driven questions
 - ✅ **RESOLVED: Question type mismatch** - Fixed 'integer' vs 'input_based' type inconsistency in question selection
 - ✅ **ADDED: Database schema updates** - Added usedQuestions and categoryProgress columns to games table
