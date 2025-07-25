@@ -288,7 +288,9 @@ async function processGame(gameId: number) {
         answer: "no_answer",
         questionId: questionData?.id || `timeout_${currentRound}_${currentQuestion}`,
         questionText: questionData?.text || 'Question text not available',
-        correctAnswer: questionData?.correct?.toString() || 'Unknown'
+        correctAnswer: currentQuestion === 1 && questionData?.options 
+          ? questionData.options[questionData.correct] 
+          : questionData?.correct?.toString() || 'Unknown'
       });
     }
     
@@ -808,15 +810,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store answer with question information for history
       const questionData = game.questionData as any;
+      
+      // Convert answer to display value for multiple choice questions
+      let displayAnswer = answer.toString();
+      let correctAnswerDisplay = questionData?.correct?.toString() || 'Unknown';
+      
+      if (game.currentQuestion === 1 && questionData?.options) {
+        // Multiple choice - convert index to actual option text
+        const answerIndex = parseInt(answer.toString());
+        if (!isNaN(answerIndex) && questionData.options[answerIndex]) {
+          displayAnswer = questionData.options[answerIndex];
+        }
+        // Convert correct answer index to text as well
+        if (!isNaN(questionData.correct) && questionData.options[questionData.correct]) {
+          correctAnswerDisplay = questionData.options[questionData.correct];
+        }
+      }
+      
       const answerRecord = await storage.createAnswer({
         gameId,
         playerId: player.id,
         round: game.currentRound!,
         question: game.currentQuestion!,
-        answer: answer.toString(),
+        answer: displayAnswer, // Use converted display value
         questionId: questionData?.id || `fallback_${game.currentRound}_${game.currentQuestion}`,
         questionText: questionData?.text || 'Question text not available',
-        correctAnswer: questionData?.correct?.toString() || 'Unknown'
+        correctAnswer: correctAnswerDisplay // Use converted correct answer
       });
       
       // Check if this completes the round

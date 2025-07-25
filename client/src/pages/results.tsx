@@ -72,24 +72,9 @@ export default function Results({ params }: ResultsProps) {
         const questionText = player1Answer?.questionText || player2Answer?.questionText || `Question ${question}`;
         const correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
         
-        // Convert position answers to actual values for multiple choice
+        // Use the stored answer values directly (they're already converted)
         let player1DisplayAnswer = player1Answer?.answer || 'no_answer';
         let player2DisplayAnswer = player2Answer?.answer || 'no_answer';
-        
-        if (isMultipleChoice && gameState.game.questionData) {
-          const questionData = gameState.game.questionData as any;
-          if (questionData.options) {
-            // Convert numeric answer to actual option text
-            if (player1DisplayAnswer !== 'no_answer' && !isNaN(Number(player1DisplayAnswer))) {
-              const index = Number(player1DisplayAnswer);
-              player1DisplayAnswer = questionData.options[index] || player1DisplayAnswer;
-            }
-            if (player2DisplayAnswer !== 'no_answer' && !isNaN(Number(player2DisplayAnswer))) {
-              const index = Number(player2DisplayAnswer);
-              player2DisplayAnswer = questionData.options[index] || player2DisplayAnswer;
-            }
-          }
-        }
         
         history.push({
           round,
@@ -166,26 +151,23 @@ export default function Results({ params }: ResultsProps) {
         </div>
 
         {/* Final Scores - Simplified */}
-        <div className="bg-card rounded-2xl p-6 shadow-lg border">
-          <h2 className="text-lg font-semibold text-foreground mb-6 text-center">Final Score</h2>
-          <div className="flex justify-center items-center space-x-8">
-            {/* Current Player */}
-            <div className="text-center">
-              <p className="font-semibold text-foreground text-lg">{currentPlayer.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {currentPlayer.score} {currentPlayer.score === 1 ? 'round' : 'rounds'} won
-              </p>
-            </div>
-            
-            <div className="text-2xl text-muted-foreground">VS</div>
-            
-            {/* Opponent */}
-            <div className="text-center">
-              <p className="font-semibold text-foreground text-lg">{opponent.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {opponent.score} {opponent.score === 1 ? 'round' : 'rounds'} won
-              </p>
-            </div>
+        <div className="flex justify-center items-center space-x-8">
+          {/* Current Player */}
+          <div className="text-center">
+            <p className="font-semibold text-foreground text-lg">{currentPlayer.name}</p>
+            <p className="text-sm text-muted-foreground">
+              {currentPlayer.score} {currentPlayer.score === 1 ? 'round' : 'rounds'} won
+            </p>
+          </div>
+          
+          <div className="text-2xl text-muted-foreground">VS</div>
+          
+          {/* Opponent */}
+          <div className="text-center">
+            <p className="font-semibold text-foreground text-lg">{opponent.name}</p>
+            <p className="text-sm text-muted-foreground">
+              {opponent.score} {opponent.score === 1 ? 'round' : 'rounds'} won
+            </p>
           </div>
         </div>
 
