@@ -59,9 +59,9 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
           </div>
 
           {/* Show correct answer - Simple */}
-          <div className="text-center">
-            <span className="text-sm text-muted-foreground">Correct Answer: </span>
-            <span className="text-base font-semibold text-foreground">{question.options?.[correctIndex] || question.correct}</span>
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">Correct Answer:</p>
+            <p className="text-base font-semibold text-green-600">{question.options?.[correctIndex] || question.correct}</p>
           </div>
 
           {/* Round result for Q1 */}
@@ -146,9 +146,9 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
         </div>
 
         {/* Show correct answer - Simple */}
-        <div className="text-center">
-          <span className="text-sm text-muted-foreground">Correct Answer: </span>
-          <span className="text-base font-semibold text-foreground">{correctAnswer}</span>
+        <div className="text-center space-y-1">
+          <p className="text-sm text-muted-foreground">Correct Answer:</p>
+          <p className="text-base font-semibold text-green-600">{correctAnswer}</p>
         </div>
 
         {/* Updated scores */}

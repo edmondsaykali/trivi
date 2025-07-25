@@ -102,11 +102,16 @@ export default function Landing() {
       setGameCode('');
       setLocation(`/lobby/${result.game.id}`);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to join game. Please check the code and try again.",
-      });
+      // Show error as subtle text instead of popup
+      setGameCode('');
+      const errorContainer = document.getElementById('join-error');
+      if (errorContainer) {
+        errorContainer.textContent = error.message || "Game not found or full. Please check the code.";
+        errorContainer.classList.remove('hidden');
+        setTimeout(() => {
+          errorContainer.classList.add('hidden');
+        }, 3000);
+      }
     } finally {
       setIsJoining(false);
     }
@@ -188,20 +193,23 @@ export default function Landing() {
             </div>
             
             <div className="space-y-4">
-              <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="0000"
-                value={gameCode}
-                onChange={(e) => setGameCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    joinGame();
-                  }
-                }}
-                className="w-full text-center text-2xl font-bold py-4 px-6 border border-border rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="0000"
+                  value={gameCode}
+                  onChange={(e) => setGameCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      joinGame();
+                    }
+                  }}
+                  className="w-full text-center text-2xl font-bold py-4 px-6 border border-border rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <p id="join-error" className="text-red-500 text-sm text-center hidden"></p>
+              </div>
               
               <div className="flex space-x-3">
                 <Button

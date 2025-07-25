@@ -127,7 +127,12 @@ export default function Game({ params }: GameProps) {
       const now = new Date().getTime();
       const deadline = new Date(gameState.game.questionDeadline).getTime();
       if (now > deadline) {
-        // Time's up, don't submit
+        // Show subtle time's up message
+        const timeUpEl = document.getElementById('time-up-message');
+        if (timeUpEl) {
+          timeUpEl.classList.remove('hidden');
+          setTimeout(() => timeUpEl.classList.add('hidden'), 3000);
+        }
         return;
       }
     }
@@ -162,11 +167,13 @@ export default function Game({ params }: GameProps) {
     if (!integerAnswer || hasAnswered) return;
     const numValue = parseInt(integerAnswer);
     if (isNaN(numValue)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Answer",
-        description: "Please enter a valid number.",
-      });
+      // Show subtle error instead of popup
+      const errorEl = document.getElementById('integer-error');
+      if (errorEl) {
+        errorEl.textContent = 'Please enter a valid number';
+        errorEl.classList.remove('hidden');
+        setTimeout(() => errorEl.classList.add('hidden'), 2000);
+      }
       return;
     }
     submitAnswer(numValue);
@@ -272,9 +279,6 @@ export default function Game({ params }: GameProps) {
             
             <div className="text-center space-y-2">
               <h2 className="text-xl font-bold text-foreground">{question.text}</h2>
-              {question.type === 'integer' && (
-                <p className="text-muted-foreground text-sm">Enter your best guess as a whole number</p>
-              )}
             </div>
           </div>
 
@@ -305,33 +309,35 @@ export default function Game({ params }: GameProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="max-w-xs mx-auto space-y-1">
-                <label className="text-xs text-muted-foreground block text-center">Your answer</label>
+              <div className="max-w-xs mx-auto">
                 <Input
                   type="number"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  placeholder="Enter number"
+                  placeholder="Your answer"
                   value={integerAnswer}
                   onChange={(e) => setIntegerAnswer(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || e.key === 'Done') {
                       e.preventDefault();
                       handleIntegerSubmit();
                     }
                   }}
                   disabled={hasAnswered || isSubmitting}
-                  className="w-full text-center text-2xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full text-center text-lg sm:text-2xl font-bold py-4 px-6 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-sm sm:placeholder:text-lg"
                 />
               </div>
 
-              <Button
-                onClick={handleIntegerSubmit}
-                disabled={!integerAnswer || hasAnswered || isSubmitting}
-                className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-orange-400/90 hover:to-orange-500/90 transition-all shadow-lg"
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Answer'}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleIntegerSubmit}
+                  disabled={!integerAnswer || hasAnswered || isSubmitting}
+                  className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-orange-400/90 hover:to-orange-500/90 transition-all shadow-lg"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+                </Button>
+                <p id="integer-error" className="text-red-500 text-sm text-center hidden"></p>
+              </div>
             </div>
           )}
         </div>
@@ -342,6 +348,11 @@ export default function Game({ params }: GameProps) {
             <p className="text-sm text-muted-foreground">Waiting for {opponent?.name}...</p>
           </div>
         )}
+
+        {/* Time's Up Message */}
+        <div id="time-up-message" className="hidden text-center">
+          <p className="text-red-500 text-sm font-medium">Time's up!</p>
+        </div>
 
 
       </div>
