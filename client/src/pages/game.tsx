@@ -103,8 +103,9 @@ export default function Game({ params }: GameProps) {
   // Scroll to top on component mount  
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Clear the transition flag when we reach the game page
+    // Clear the transition flags when we reach the game page
     sessionStorage.removeItem(`trivi-transitioned-${gameId}`);
+    sessionStorage.removeItem(`trivi-game-starting-${gameId}`);
   }, [gameId]);
 
   useEffect(() => {
