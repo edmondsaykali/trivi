@@ -326,7 +326,8 @@ async function processGame(gameId: number) {
 }
 
 function evaluateMultipleChoice(questionData: any, answers: any[], players: any[]): { correctCount: number, winner: number | null } {
-  const correctIndex = questionData.options?.findIndex((opt: string) => opt === questionData.correct) ?? -1;
+  // The correct field already contains the correct index
+  const correctIndex = questionData.correct;
   
   // Check each player's answer
   const playerAnswers = players.map(player => {
@@ -339,6 +340,8 @@ function evaluateMultipleChoice(questionData: any, answers: any[], players: any[
   });
   
   const correctAnswers = playerAnswers.filter(pa => pa.isCorrect);
+  
+  console.log(`Q1 evaluation: correctIndex=${correctIndex}, playerAnswers:`, playerAnswers.map(pa => `Player ${pa.playerId}: ${pa.answer} (${pa.isCorrect ? 'correct' : 'wrong'})`));
   
   return {
     correctCount: correctAnswers.length,

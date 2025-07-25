@@ -81,6 +81,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 25, 2025)
 
+### Critical Bug Fixes & Performance Improvements (July 25)
+- ✅ **FIXED: Critical Q1 round completion bug** - Players answering Q1 correctly now properly win the round instead of continuing to Q2
+- ✅ **FIXED: Major performance issue** - Switched from slow database connection to memory storage (reduced response times from 10+ seconds to milliseconds)
+- ✅ **ENHANCED: Game logic evaluation** - Fixed evaluateMultipleChoice function to properly compare answer indices
+
 ### UI Polish & Error Handling Improvements (July 25)
 - ✅ **FIXED: Lobby transition synchronization** - Added session storage flags to prevent false "host closed lobby" messages
 - ✅ **ENHANCED: Error messaging** - All errors now show as subtle red text instead of popup boxes
