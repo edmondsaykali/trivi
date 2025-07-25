@@ -30,10 +30,12 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (gameState?.game.status === 'playing') {
       setIsTransitioning(true);
-      setLocation(`/game/${gameId}`);
+      setTimeout(() => {
+        setLocation(`/game/${gameId}`);
+      }, 100); // Small delay to ensure state is updated
     } else if (gameState?.game.status === 'finished') {
-      // Don't redirect to results from lobby
-      console.error('Game finished before starting - something went wrong');
+      // Don't redirect to results from lobby, but log for debugging
+      console.log('Game finished before starting - checking if this is expected');
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
@@ -41,16 +43,21 @@ export default function Lobby({ params }: LobbyProps) {
   useEffect(() => {
     if (!gameState) return;
     
-    // If game finished while in lobby, host must have left
+    // Only check for closed lobby if game status is 'finished' and we never started transitioning
+    // This prevents false positives when game properly transitions to 'playing'
     if (gameState.game.status === 'finished' && !isStarting && !isTransitioning) {
-      toast({
-        title: "Lobby Closed",
-        description: "The host has closed this lobby.",
-      });
-      setTimeout(() => {
-        setLocation('/');
-      }, 2000);
-      return;
+      // Additional check: make sure we're still in lobby and not already in game
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/lobby/')) {
+        toast({
+          title: "Lobby Closed",
+          description: "The host has closed this lobby.",
+        });
+        setTimeout(() => {
+          setLocation('/');
+        }, 2000);
+        return;
+      }
     }
     
     const lobbyKey = `trivi-lobby-${gameId}`;
@@ -60,8 +67,8 @@ export default function Lobby({ params }: LobbyProps) {
     // Update stored player count
     sessionStorage.setItem(lobbyKey, currentPlayerCount.toString());
     
-    // Only show message if player count decreased (someone left) and we're the host
-    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator) {
+    // Only show message if player count decreased (someone left) and we're the host and game is still waiting
+    if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator && !isStarting && !isTransitioning) {
       toast({
         title: "Player Left",
         description: "The other player has left the lobby.",
