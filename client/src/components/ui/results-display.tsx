@@ -21,13 +21,13 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   if (question.type === 'multiple_choice') {
     const correctIndex = typeof question.correct === 'string' 
       ? question.options?.findIndex((opt) => opt === question.correct) ?? -1
-      : question.correct;
+      : (typeof question.correct === 'number' ? question.correct : -1);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-        <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-start justify-center pt-24">
+        <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border" style={{ minHeight: '400px' }}>
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold text-foreground">Question Results</h2>
+            <h2 className="text-lg font-bold text-foreground">Question Results</h2>
             <p className="text-muted-foreground">{question.text}</p>
           </div>
 
@@ -59,9 +59,11 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
           </div>
 
           {/* Show correct answer - Simple */}
-          <div className="text-center">
-            <span className="text-sm text-muted-foreground">Correct Answer: </span>
-            <span className="text-base font-semibold text-foreground">{question.options?.[correctIndex] || question.correct}</span>
+          <div className="text-center space-y-2">
+            <div className="text-sm text-muted-foreground">Correct answer</div>
+            <div className="text-base font-bold text-foreground bg-green-50 p-3 rounded-lg border border-green-200">
+              {question.options?.[correctIndex] || question.correct}
+            </div>
           </div>
 
           {/* Round result for Q1 */}
@@ -96,10 +98,10 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
   const winnerId = game.lastRoundWinnerId;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-center justify-center">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4 flex items-start justify-center pt-24">
+      <div className="bg-card rounded-2xl p-6 w-full max-w-lg space-y-6 shadow-lg border" style={{ minHeight: '400px' }}>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-foreground">Round {game.currentRound} Complete!</h2>
+          <h2 className="text-lg font-bold text-foreground">Question Results</h2>
           <p className="text-muted-foreground">{question.text}</p>
         </div>
 
@@ -146,9 +148,11 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
         </div>
 
         {/* Show correct answer - Simple */}
-        <div className="text-center">
-          <span className="text-sm text-muted-foreground">Correct Answer: </span>
-          <span className="text-base font-semibold text-foreground">{correctAnswer}</span>
+        <div className="text-center space-y-2">
+          <div className="text-sm text-muted-foreground">Correct answer</div>
+          <div className="text-base font-bold text-foreground bg-green-50 p-3 rounded-lg border border-green-200">
+            {correctAnswer}
+          </div>
         </div>
 
         {/* Updated scores */}

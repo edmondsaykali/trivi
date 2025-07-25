@@ -273,7 +273,7 @@ async function processGame(gameId: number) {
 
   // Execute decision
   if (shouldContinueToQ2) {
-    console.log(`Q1 results - showing for 3 seconds before Q2...`);
+    console.log(`Q1 results - showing for 5 seconds before Q2...`);
     
     // Pre-load next question data
     const nextQuestionData = await getRandomQuestion('integer');
@@ -284,7 +284,7 @@ async function processGame(gameId: number) {
       lastRoundWinnerId: null // No round winner yet
     });
     
-    // Show results for 3 seconds, then move to Q2
+    // Show results for 5 seconds, then move to Q2
     setTimeout(async () => {
       // Start Q2 with pre-loaded data
       const deadline = new Date(Date.now() + 15000);
@@ -303,20 +303,20 @@ async function processGame(gameId: number) {
         console.log(`Time's up for R${currentRound}Q2`);
         await processGame(gameId);
       }, 15000);
-    }, 3000);
+    }, 5000);
   } else if (roundComplete) {
     // Show results before completing round
-    console.log(`Round ${currentRound} complete - showing results for 3 seconds...`);
+    console.log(`Round ${currentRound} complete - showing results for 5 seconds...`);
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
       status: 'showing_results',
       lastRoundWinnerId: roundWinner
     });
     
-    // Show results for 3 seconds, then complete round
+    // Show results for 5 seconds, then complete round
     setTimeout(async () => {
       await completeRound(gameId, currentRound!, roundWinner);
-    }, 3000);
+    }, 5000);
   }
 
   await storage.updateGame(gameId, { 
@@ -412,7 +412,7 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
       if (newScore >= ROUNDS_TO_WIN) {
         console.log(`${winner.name} wins the game with ${newScore} rounds!`);
         
-        // Show final results for 3 seconds before finishing
+        // Show final results for 5 seconds before finishing
         await storage.updateGame(gameId, { 
           waitingForAnswers: false,
           status: 'showing_results',
@@ -421,7 +421,7 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
         
         setTimeout(async () => {
           await finishGame(gameId, winnerId);
-        }, 3000);
+        }, 5000);
         return;
       }
     }

@@ -221,18 +221,15 @@ export default function Lobby({ params }: LobbyProps) {
 
         {/* Start Button */}
         {canStart && (
-          <div className="flex justify-center items-center gap-3">
-            {/* Small logo similar to home page */}
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: '#F97316' }}>
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-4 h-4 bg-white rounded-full"></div>
-              </div>
-            </div>
+          <div className="flex justify-center">
             <Button
               onClick={startGame}
               disabled={isStarting}
-              className="py-3 px-8 rounded-xl font-medium text-lg"
+              className="py-3 px-8 rounded-xl font-medium text-lg flex items-center gap-2"
             >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+              </svg>
               {isStarting ? 'Starting...' : 'Start Game'}
             </Button>
           </div>
