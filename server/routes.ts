@@ -182,8 +182,8 @@ async function processGame(gameId: number) {
   if (shouldContinueToQ2) {
     console.log(`Q1 results - showing for 4 seconds before Q2...`);
     
-    // Pre-load next question data with smart selection
-    const nextQuestionData = await getSmartQuestion('integer', gameId);
+    // Pre-load next question data with random selection
+    const nextQuestionData = await getRandomQuestion('input_based', gameId);
     
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,

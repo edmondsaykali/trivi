@@ -232,10 +232,112 @@ export class MemStorage implements IStorage {
     return updatedRound;
   }
 
-  // Questions - Not needed for in-memory, uses hardcoded questions
+  // Questions - Hardcoded questions for in-memory storage
   async getRandomQuestionByType(type: string, excludeIds: number[] = []): Promise<Question | undefined> {
-    // This would use hardcoded questions for in-memory storage
-    return undefined;
+    const hardcodedQuestions: Question[] = [
+      // Multiple choice questions
+      {
+        id: 1,
+        text: "What is the capital of France?",
+        options: ["London", "Berlin", "Paris", "Madrid"],
+        correctAnswer: "Paris",
+        category: "Geography",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 2,
+        text: "Which planet is known as the Red Planet?",
+        options: ["Venus", "Mars", "Jupiter", "Saturn"],
+        correctAnswer: "Mars",
+        category: "Science",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 3,
+        text: "Who painted the Mona Lisa?",
+        options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Claude Monet"],
+        correctAnswer: "Leonardo da Vinci",
+        category: "Art",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 4,
+        text: "What is the largest ocean on Earth?",
+        options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+        correctAnswer: "Pacific Ocean",
+        category: "Geography",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      {
+        id: 5,
+        text: "Which element has the chemical symbol 'O'?",
+        options: ["Gold", "Oxygen", "Silver", "Iron"],
+        correctAnswer: "Oxygen",
+        category: "Science",
+        type: "multiple_choice",
+        createdAt: new Date()
+      },
+      // Integer questions
+      {
+        id: 101,
+        text: "How many continents are there?",
+        options: null,
+        correctAnswer: "7",
+        category: "Geography",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 102,
+        text: "In what year did World War II end?",
+        options: null,
+        correctAnswer: "1945",
+        category: "History",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 103,
+        text: "How many sides does a hexagon have?",
+        options: null,
+        correctAnswer: "6",
+        category: "Mathematics",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 104,
+        text: "What is the freezing point of water in Celsius?",
+        options: null,
+        correctAnswer: "0",
+        category: "Science",
+        type: "input_based",
+        createdAt: new Date()
+      },
+      {
+        id: 105,
+        text: "How many players are on a basketball team on the court at one time?",
+        options: null,
+        correctAnswer: "5",
+        category: "Sports",
+        type: "input_based",
+        createdAt: new Date()
+      }
+    ];
+
+    const questionsOfType = hardcodedQuestions.filter(q => q.type === type);
+    const availableQuestions = questionsOfType.filter(q => !excludeIds.includes(q.id));
+    
+    if (availableQuestions.length === 0) {
+      // If no unused questions, return from all questions of that type
+      return questionsOfType.length > 0 ? questionsOfType[Math.floor(Math.random() * questionsOfType.length)] : undefined;
+    }
+    
+    return availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
   }
 }
 
@@ -478,7 +580,10 @@ async function initializeDatabase() {
         question INTEGER NOT NULL,
         answer TEXT NOT NULL,
         submitted_at TIMESTAMP DEFAULT NOW() NOT NULL,
-        is_correct BOOLEAN
+        is_correct BOOLEAN,
+        question_id TEXT,
+        question_text TEXT,
+        correct_answer TEXT
       )
     `;
 
@@ -497,6 +602,11 @@ async function initializeDatabase() {
     // Add missing columns to existing games table
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS used_questions JSONB DEFAULT '[]'::jsonb`;
     await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS category_progress JSONB DEFAULT '{}'::jsonb`;
+    
+    // Add missing columns to existing answers table
+    await sql`ALTER TABLE answers ADD COLUMN IF NOT EXISTS question_id TEXT`;
+    await sql`ALTER TABLE answers ADD COLUMN IF NOT EXISTS question_text TEXT`;
+    await sql`ALTER TABLE answers ADD COLUMN IF NOT EXISTS correct_answer TEXT`;
 
     await sql.end();
 
@@ -508,8 +618,23 @@ async function initializeDatabase() {
   }
 }
 
-// Use PostgreSQL storage for database access
-export const storage = new DatabaseStorage();
+// Initialize storage based on environment
+function createStorage(): IStorage {
+  if (process.env.DATABASE_URL) {
+    try {
+      return new DatabaseStorage();
+    } catch (error) {
+      console.warn("⚠️ Database connection failed, falling back to memory storage");
+      console.warn("Error:", (error as Error).message);
+      return new MemStorage();
+    }
+  } else {
+    console.log("📝 Using in-memory storage (no DATABASE_URL configured)");
+    return new MemStorage();
+  }
+}
+
+export const storage = createStorage();
 
 // Initialize database tables on startup (non-blocking)
 let databaseReady = false;
