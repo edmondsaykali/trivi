@@ -46,7 +46,7 @@ export default function Results({ params }: ResultsProps) {
     }
   }, [gameState?.game.status, gameId, setLocation]);
 
-  // Build game history from answers
+  // Build game history from answers with actual answer values
   useEffect(() => {
     if (allAnswers.length > 0 && gameState) {
       const history: GameHistory[] = [];
@@ -68,19 +68,39 @@ export default function Results({ params }: ResultsProps) {
         const player1Answer = answers.find(a => a.playerId === currentPlayer?.id);
         const player2Answer = answers.find(a => a.playerId === opponent?.id);
         
-        // Create history entry with actual question text if available
-        const questionText = player1Answer?.questionText || player2Answer?.questionText || `Round ${round} - Question ${question}`;
+        // Get the question text from stored data
+        const questionText = player1Answer?.questionText || player2Answer?.questionText || `Question ${question}`;
+        const correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
+        
+        // Convert position answers to actual values for multiple choice
+        let player1DisplayAnswer = player1Answer?.answer || 'no_answer';
+        let player2DisplayAnswer = player2Answer?.answer || 'no_answer';
+        
+        if (isMultipleChoice && gameState.game.questionData) {
+          const questionData = gameState.game.questionData as any;
+          if (questionData.options) {
+            // Convert numeric answer to actual option text
+            if (player1DisplayAnswer !== 'no_answer' && !isNaN(Number(player1DisplayAnswer))) {
+              const index = Number(player1DisplayAnswer);
+              player1DisplayAnswer = questionData.options[index] || player1DisplayAnswer;
+            }
+            if (player2DisplayAnswer !== 'no_answer' && !isNaN(Number(player2DisplayAnswer))) {
+              const index = Number(player2DisplayAnswer);
+              player2DisplayAnswer = questionData.options[index] || player2DisplayAnswer;
+            }
+          }
+        }
+        
         history.push({
           round,
           question,
           questionText,
           questionType: isMultipleChoice ? 'multiple_choice' : 'integer',
-          correctAnswer: player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown',
-          player1Answer: player1Answer?.answer || 'no_answer',
-          player2Answer: player2Answer?.answer || 'no_answer',
-          player1Correct: false, // Will be determined by game logic
-          player2Correct: false,
-          roundWinner: undefined
+          correctAnswer,
+          player1Answer: player1DisplayAnswer,
+          player2Answer: player2DisplayAnswer,
+          player1Correct: player1Answer?.isCorrect || false,
+          player2Correct: player2Answer?.isCorrect || false
         });
       });
 
@@ -129,18 +149,7 @@ export default function Results({ params }: ResultsProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/20 p-4">
-      <div className="max-w-4xl mx-auto space-y-8 py-8">
-        {/* Header with Home Button */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={returnToLanding}
-            className="p-2"
-          >
-            <Home className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-8 py-4">
 
         {/* Winner Celebration */}
         <div className="text-center space-y-4">
@@ -150,7 +159,7 @@ export default function Results({ params }: ResultsProps) {
             </h1>
             <p className="text-xl text-muted-foreground">
               {isDraw ? "Great game! Both players showed excellent skills." : 
-               isWinner ? `Congratulations ${currentPlayer.name}! You won!` : 
+               isWinner ? `Congratulations ${currentPlayer.name}, you won!` : 
                `${winner?.name} wins this round!`}
             </p>
           </div>
@@ -180,65 +189,56 @@ export default function Results({ params }: ResultsProps) {
           </div>
         </div>
 
-        {/* Detailed Game History */}
+        {/* Game History - Single Box */}
         {gameHistory.length > 0 && (
           <div className="bg-card rounded-2xl p-6 shadow-lg border">
             <h2 className="text-lg font-semibold text-foreground mb-4">Game History</h2>
-            <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
-              {gameHistory.map((item, idx) => {
-                
-                return (
-                  <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-foreground">Round {item.round}</h3>
-                      <span className={`text-sm font-medium ${
-                        item.roundWinner === currentPlayer.id 
-                          ? 'text-green-600' 
-                          : item.roundWinner === opponent.id
-                          ? 'text-red-600'
-                          : 'text-muted-foreground'
+            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+              {gameHistory.map((item, idx) => (
+                <div key={idx} className="space-y-2">
+                  {/* Question */}
+                  <div className="text-sm font-medium text-foreground">
+                    {item.questionText}
+                  </div>
+                  
+                  {/* Show correct answer */}
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <span className="font-medium">Correct Answer:</span> <span className="text-green-600">{item.correctAnswer}</span>
+                  </div>
+                  
+                  {/* Players' answers */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{currentPlayer.name}:</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        item.player1Answer === 'no_answer' 
+                          ? 'bg-gray-100 text-gray-600' 
+                          : item.player1Correct
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                       }`}>
-                        {item.roundWinner === currentPlayer.id ? '✓ You Won' : 
-                         item.roundWinner === opponent.id ? `✓ ${opponent.name} Won` : 
-                         '— Draw'}
+                        {item.player1Answer === 'no_answer' ? 'No answer' : item.player1Answer}
                       </span>
                     </div>
                     
-                    {/* Question */}
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">Question:</span> {item.questionText || 'Question not available'}
-                    </div>
-                    
-                    {/* Answers */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{currentPlayer.name}</span>
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          item.player1Answer === 'no_answer' 
-                            ? 'bg-gray-100 text-gray-600' 
-                            : item.player1Correct
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {item.player1Answer === 'no_answer' ? 'No answer' : item.player1Answer}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{opponent.name}</span>
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          item.player2Answer === 'no_answer' 
-                            ? 'bg-gray-100 text-gray-600' 
-                            : item.player2Correct
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {item.player2Answer === 'no_answer' ? 'No answer' : item.player2Answer}
-                        </div>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{opponent.name}:</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        item.player2Answer === 'no_answer' 
+                          ? 'bg-gray-100 text-gray-600' 
+                          : item.player2Correct
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {item.player2Answer === 'no_answer' ? 'No answer' : item.player2Answer}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  {/* Separator line except for last item */}
+                  {idx < gameHistory.length - 1 && <hr className="border-border mt-3" />}
+                </div>
+              ))}
             </div>
           </div>
         )}
