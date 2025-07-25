@@ -155,9 +155,9 @@ function InlineResultsDisplay({ gameState, currentPlayer, opponent }: QuestionRe
           if (answer && answer.submittedAt && game.questionDeadline) {
             const submitTime = new Date(answer.submittedAt).getTime();
             const questionStartTime = new Date(game.questionDeadline).getTime() - 15000; // 15 seconds before deadline
-            const elapsed = Math.round((submitTime - questionStartTime) / 1000);
+            const elapsed = (submitTime - questionStartTime) / 1000;
             if (elapsed > 0 && elapsed <= 15) {
-              elapsedTime = `${elapsed}s`;
+              elapsedTime = `${elapsed.toFixed(2)}s`;
             }
           }
           
@@ -175,7 +175,7 @@ function InlineResultsDisplay({ gameState, currentPlayer, opponent }: QuestionRe
                   {userAnswer === 'no_answer' ? 'No answer' : userAnswer}
                 </div>
                 {elapsedTime && (
-                  <span className="text-xs text-muted-foreground">({elapsedTime})</span>
+                  <span className="text-xs text-muted-foreground">{elapsedTime}</span>
                 )}
               </div>
             </div>

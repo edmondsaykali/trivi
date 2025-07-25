@@ -20,6 +20,7 @@ export default function Lobby({ params }: LobbyProps) {
   const { gameState, loading } = useGameState(gameId);
   const [isStarting, setIsStarting] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [lobbyMessage, setLobbyMessage] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -55,10 +56,8 @@ export default function Lobby({ params }: LobbyProps) {
     if (gameState.game.status === 'finished' && !isStarting && !isTransitioning && 
         gameState.game.currentRound === 1 && gameState.game.currentQuestion === 1 && 
         !gameState.game.questionData) {
-      toast({
-        title: "Lobby Closed",
-        description: "The host has closed this lobby.",
-      });
+      // Show subtle message instead of popup
+      setLobbyMessage("The host has closed this lobby.");
       setTimeout(() => {
         setLocation('/');
       }, 2000);
@@ -74,10 +73,7 @@ export default function Lobby({ params }: LobbyProps) {
     
     // Only show message if player count decreased (someone left) and we're the host
     if (previousPlayerCount > currentPlayerCount && gameState.game.status === 'waiting' && isCreator) {
-      toast({
-        title: "Player Left",
-        description: "The other player has left the lobby.",
-      });
+      setLobbyMessage("The other player has left the lobby.");
     }
   }, [gameState?.players.length, gameState?.game.status, gameId, toast, isCreator, isStarting, isTransitioning, setLocation]);
 
@@ -283,6 +279,13 @@ export default function Lobby({ params }: LobbyProps) {
         {!isCreator && players.length === 2 && (
           <div className="text-center">
             <p className="text-base text-muted-foreground">Waiting for host...</p>
+          </div>
+        )}
+        
+        {/* Subtle lobby message */}
+        {lobbyMessage && (
+          <div className="text-center">
+            <p className="text-sm text-red-500">{lobbyMessage}</p>
           </div>
         )}
       </div>

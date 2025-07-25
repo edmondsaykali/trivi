@@ -143,18 +143,9 @@ export default function Results({ params }: ResultsProps) {
 
         {/* Winner Celebration */}
         <div className="text-center space-y-4">
-          <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mx-auto shadow-lg">
-            {isDraw ? (
-              <div className="text-white text-4xl">🤝</div>
-            ) : isWinner ? (
-              <Trophy className="w-12 h-12 text-white" />
-            ) : (
-              <Target className="w-12 h-12 text-white" />
-            )}
-          </div>
           <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              {isDraw ? "It's a Draw!" : isWinner ? 'Victory!' : 'Game Over'}
+            <h1 className="text-4xl font-bold text-orange-500 mb-2">
+              {isDraw ? "It's a Draw!" : isWinner ? 'Victory' : 'Game Over'}
             </h1>
             <p className="text-xl text-muted-foreground">
               {isDraw ? "Great game! Both players showed excellent skills." : 
@@ -164,44 +155,26 @@ export default function Results({ params }: ResultsProps) {
           </div>
         </div>
 
-        {/* Final Scores */}
+        {/* Final Scores - Simplified */}
         <div className="bg-card rounded-2xl p-6 shadow-lg border">
           <h2 className="text-lg font-semibold text-foreground mb-6 text-center">Final Score</h2>
-          <div className="flex justify-center items-center space-x-12">
+          <div className="flex justify-center items-center space-x-8">
             {/* Current Player */}
             <div className="text-center">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
-                isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
-              }`}>
-                <span className={`text-2xl font-bold ${isWinner ? 'text-white' : 'text-muted-foreground'}`}>
-                  {currentPlayer.score}
-                </span>
-              </div>
-              <div className="mt-3">
-                <p className="font-semibold text-foreground">{currentPlayer.name}</p>
-                <p className={`text-sm ${isWinner ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {currentPlayer.score} {currentPlayer.score === 1 ? 'round' : 'rounds'} won
-                </p>
-              </div>
+              <p className="font-semibold text-foreground text-lg">{currentPlayer.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {currentPlayer.score} {currentPlayer.score === 1 ? 'round' : 'rounds'} won
+              </p>
             </div>
             
             <div className="text-2xl text-muted-foreground">VS</div>
             
             {/* Opponent */}
             <div className="text-center">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
-                !isDraw && !isWinner ? 'bg-gradient-to-br from-primary to-primary/80' : 'bg-muted'
-              }`}>
-                <span className={`text-2xl font-bold ${!isDraw && !isWinner ? 'text-white' : 'text-muted-foreground'}`}>
-                  {opponent.score}
-                </span>
-              </div>
-              <div className="mt-3">
-                <p className="font-semibold text-foreground">{opponent.name}</p>
-                <p className={`text-sm ${!isDraw && !isWinner ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {opponent.score} {opponent.score === 1 ? 'round' : 'rounds'} won
-                </p>
-              </div>
+              <p className="font-semibold text-foreground text-lg">{opponent.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {opponent.score} {opponent.score === 1 ? 'round' : 'rounds'} won
+              </p>
             </div>
           </div>
         </div>

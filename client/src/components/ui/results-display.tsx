@@ -115,9 +115,9 @@ export function ResultsDisplay({ gameState, currentPlayer, opponent, answers }: 
             if (answer && answer.submittedAt && game.questionDeadline) {
               const submitTime = new Date(answer.submittedAt).getTime();
               const questionStartTime = new Date(game.questionDeadline).getTime() - 15000; // 15 seconds before deadline
-              const elapsed = Math.round((submitTime - questionStartTime) / 1000);
+              const elapsed = (submitTime - questionStartTime) / 1000;
               if (elapsed > 0 && elapsed <= 15) {
-                elapsedTime = `${elapsed}s`;
+                elapsedTime = `${elapsed.toFixed(2)}s`;
               }
             }
             
