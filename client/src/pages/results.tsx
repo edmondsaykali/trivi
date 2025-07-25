@@ -70,18 +70,11 @@ export default function Results({ params }: ResultsProps) {
         
         // Get the question text and correct answer from stored data
         const questionText = player1Answer?.questionText || player2Answer?.questionText || `Question ${question}`;
-        let correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
+        const correctAnswer = player1Answer?.correctAnswer || player2Answer?.correctAnswer || 'Unknown';
         
-        // Get user answers and convert numeric positions to actual text values
-        let player1DisplayAnswer = player1Answer?.answer || 'no_answer';
-        let player2DisplayAnswer = player2Answer?.answer || 'no_answer';
-        
-        // For multiple choice questions, convert numeric answers to actual text
-        if (isMultipleChoice) {
-          // Make a request to get the full question data including options
-          // For now, we'll use a simplified approach - the answers should already contain text values from the server processing
-          // This will be improved once we have access to the full question data structure
-        }
+        // Get user answers - they should already be stored as text values in the database
+        const player1DisplayAnswer = player1Answer?.answer || 'no_answer';
+        const player2DisplayAnswer = player2Answer?.answer || 'no_answer';
         
         history.push({
           round,

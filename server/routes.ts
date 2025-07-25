@@ -280,6 +280,16 @@ async function processGame(gameId: number) {
     // Auto-save "no answer" for players who didn't respond
     const questionData = game.questionData as any;
     for (const playerId of noAnswerPlayers) {
+      let correctAnswerText = questionData?.correct?.toString() || 'Unknown';
+      
+      // Convert correct answer index to text for multiple choice
+      if (currentQuestion === 1 && questionData?.options) {
+        const correctIndex = questionData.correct;
+        if (typeof correctIndex === 'number' && questionData.options[correctIndex]) {
+          correctAnswerText = questionData.options[correctIndex];
+        }
+      }
+      
       await storage.createAnswer({
         gameId,
         playerId,
@@ -288,7 +298,7 @@ async function processGame(gameId: number) {
         answer: "no_answer",
         questionId: questionData?.id || `timeout_${currentRound}_${currentQuestion}`,
         questionText: questionData?.text || 'Question text not available',
-        correctAnswer: questionData?.correct?.toString() || 'Unknown'
+        correctAnswer: correctAnswerText
       });
     }
     
@@ -808,15 +818,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store answer with question information for history
       const questionData = game.questionData as any;
+      
+      // Convert numeric answers to actual text for multiple choice questions
+      let answerText = answer.toString();
+      let correctAnswerText = questionData?.correct?.toString() || 'Unknown';
+      
+      if (game.currentQuestion === 1 && questionData?.options) {
+        // For multiple choice, convert index to actual option text
+        const answerIndex = parseInt(answer.toString());
+        if (!isNaN(answerIndex) && questionData.options[answerIndex]) {
+          answerText = questionData.options[answerIndex];
+        }
+        
+        // Convert correct answer index to text
+        const correctIndex = questionData.correct;
+        if (typeof correctIndex === 'number' && questionData.options[correctIndex]) {
+          correctAnswerText = questionData.options[correctIndex];
+        }
+      }
+      
       const answerRecord = await storage.createAnswer({
         gameId,
         playerId: player.id,
         round: game.currentRound!,
         question: game.currentQuestion!,
-        answer: answer.toString(),
+        answer: answerText,
         questionId: questionData?.id || `fallback_${game.currentRound}_${game.currentQuestion}`,
         questionText: questionData?.text || 'Question text not available',
-        correctAnswer: questionData?.correct?.toString() || 'Unknown'
+        correctAnswer: correctAnswerText
       });
       
       // Check if this completes the round
