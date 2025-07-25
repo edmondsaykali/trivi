@@ -180,16 +180,16 @@ export default function Lobby({ params }: LobbyProps) {
             onClick={() => setLocation('/')}
             className="p-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-semibold text-foreground">Lobby</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Lobby</h1>
           <div className="w-8"></div>
         </div>
         
         {/* Game Code */}
         <div className="text-center space-y-2">
-          <p className="text-xs text-muted-foreground">Game Code</p>
-          <div className="text-3xl font-bold text-primary tracking-wider">{game.code}</div>
+          <p className="text-sm text-muted-foreground">Game Code</p>
+          <div className="text-4xl font-bold text-primary tracking-wider">{game.code}</div>
         </div>
 
         {/* Simple separator line */}
@@ -197,32 +197,41 @@ export default function Lobby({ params }: LobbyProps) {
           <div className="w-16 h-px bg-border"></div>
         </div>
 
-        {/* Players List - Simple */}
-        <div className="space-y-3">
-          {players.map((player) => (
-            <div key={player.id} className="text-center">
-              <p className="text-sm font-medium text-foreground">
-                {player.name}
-              </p>
-            </div>
-          ))}
-          
-          {players.length < 2 && (
-            <div className="text-center opacity-50">
-              <p className="text-sm text-muted-foreground">Waiting for player...</p>
-            </div>
-          )}
+        {/* Players List */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground text-center">Players:</h2>
+          <div className="space-y-3">
+            {players.map((player) => (
+              <div key={player.id} className="text-center">
+                <p className="text-base font-medium text-foreground">
+                  {player.name}
+                </p>
+              </div>
+            ))}
+            
+            {players.length < 2 && (
+              <div className="text-center opacity-50">
+                <p className="text-base text-muted-foreground">Waiting for player...</p>
+              </div>
+            )}
+          </div>
         </div>
 
 
 
         {/* Start Button */}
         {canStart && (
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-3">
+            {/* Small logo similar to home page */}
+            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: '#F97316' }}>
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-white rounded-full"></div>
+              </div>
+            </div>
             <Button
               onClick={startGame}
               disabled={isStarting}
-              className="py-3 px-8 rounded-xl font-medium"
+              className="py-3 px-8 rounded-xl font-medium text-lg"
             >
               {isStarting ? 'Starting...' : 'Start Game'}
             </Button>
@@ -231,7 +240,7 @@ export default function Lobby({ params }: LobbyProps) {
         
         {!isCreator && players.length === 2 && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">Waiting for host...</p>
+            <p className="text-base text-muted-foreground">Waiting for host...</p>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,10 @@ export default function Landing() {
   const [gameCode, setGameCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [highlightNameInput, setHighlightNameInput] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Load username from sessionStorage
@@ -30,11 +32,9 @@ export default function Landing() {
 
   const createGame = async () => {
     if (!username.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Name Required",
-        description: "Please enter your name to create a game.",
-      });
+      setHighlightNameInput(true);
+      nameInputRef.current?.focus();
+      setTimeout(() => setHighlightNameInput(false), 2000);
       return;
     }
 
@@ -67,11 +67,9 @@ export default function Landing() {
 
   const joinGame = async () => {
     if (!username.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Name Required",
-        description: "Please enter your name to join a game.",
-      });
+      setHighlightNameInput(true);
+      nameInputRef.current?.focus();
+      setTimeout(() => setHighlightNameInput(false), 2000);
       return;
     }
 
@@ -122,6 +120,7 @@ export default function Landing() {
         {/* Header */}
         <div className="text-center space-y-4">
           <div>
+            <h1 className="text-3xl font-bold mb-3" style={{ color: '#F97316' }}>Trivia on the go</h1>
             <p className="text-muted-foreground">Challenge friends in real-time trivia battles. Quick rounds, first to 5 wins.</p>
           </div>
         </div>
@@ -129,6 +128,7 @@ export default function Landing() {
         {/* Username Input */}
         <div className="space-y-2">
           <Input
+            ref={nameInputRef}
             id="username"
             type="text"
             placeholder="Enter your name"
@@ -140,13 +140,18 @@ export default function Landing() {
                 const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
                 setUsername(capitalizedValue);
               }
+              setHighlightNameInput(false);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && isNameValid) {
                 createGame();
               }
             }}
-            className="w-full px-4 py-3 rounded-xl text-lg"
+            className={`w-full px-4 py-3 rounded-xl text-lg transition-all duration-300 ${
+              highlightNameInput 
+                ? 'border-2 border-orange-400 ring-2 ring-orange-200' 
+                : 'border border-border'
+            }`}
             maxLength={10}
           />
         </div>
@@ -159,7 +164,7 @@ export default function Landing() {
             className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play className="w-5 h-5" />
-            {isCreating ? 'Creating...' : 'Start Game'}
+            {isCreating ? 'Creating...' : 'Create Game'}
           </Button>
           
           <Button
