@@ -15,6 +15,8 @@ export const games = pgTable("games", {
   questionDeadline: timestamp("question_deadline"),
   lastRoundWinnerId: integer("last_round_winner_id"),
   waitingForAnswers: boolean("waiting_for_answers").default(false),
+  usedQuestions: jsonb("used_questions").default([]), // Array of used question IDs/indices
+  categoryProgress: jsonb("category_progress").default({}), // Track category usage for fair distribution
 });
 
 export const players = pgTable("players", {
@@ -36,6 +38,9 @@ export const answers = pgTable("answers", {
   answer: text("answer").notNull(),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
   isCorrect: boolean("is_correct"),
+  questionId: text("question_id"), // ID/index of the question used
+  questionText: text("question_text"), // Store the actual question text
+  correctAnswer: text("correct_answer"), // Store the correct answer for history
 });
 
 export const rounds = pgTable("rounds", {

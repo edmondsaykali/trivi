@@ -149,11 +149,29 @@ function getRandomAvatar(): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-async function getRandomQuestion(type: 'multiple_choice' | 'integer') {
-  // Try to get question from Supabase
+// Enhanced question selection with fair category coverage and uniqueness
+async function getSmartQuestion(type: 'multiple_choice' | 'integer', gameId: number) {
+  const game = await storage.getGameById(gameId);
+  if (!game) throw new Error('Game not found');
+  
+  const usedQuestions = (game.usedQuestions as string[]) || [];
+  const categoryProgress = (game.categoryProgress as Record<string, number>) || {};
+  
+  // Try to get question from Supabase first
   const question = await storage.getRandomQuestionByType(type);
-  if (question) {
+  if (question && !usedQuestions.includes(question.id.toString())) {
+    // Track usage and update category progress
+    const newUsedQuestions = [...usedQuestions, question.id.toString()];
+    const newCategoryProgress = { ...categoryProgress };
+    newCategoryProgress[question.category] = (newCategoryProgress[question.category] || 0) + 1;
+    
+    await storage.updateGame(gameId, {
+      usedQuestions: newUsedQuestions,
+      categoryProgress: newCategoryProgress
+    });
+    
     return {
+      id: question.id.toString(),
       text: question.text,
       options: question.options as string[] || undefined,
       correct: question.correctAnswer,
@@ -162,14 +180,57 @@ async function getRandomQuestion(type: 'multiple_choice' | 'integer') {
     };
   }
   
-  // Fallback to hardcoded questions if database is unavailable
+  // Fallback to hardcoded questions with smart selection
   const typeMapping = { 'multiple_choice': 'multipleChoice', 'integer': 'integer' } as const;
   const pool = QUESTIONS_POOL[typeMapping[type]];
-  const fallbackQuestion = pool[Math.floor(Math.random() * pool.length)];
   
-  // Ensure the type field is properly set for fallback questions
+  // Filter out used questions and apply fair category distribution
+  const availableQuestions = pool.filter((q, index) => {
+    const questionId = `${type}_${index}`;
+    return !usedQuestions.includes(questionId);
+  });
+  
+  if (availableQuestions.length === 0) {
+    // If all questions used, reset and start over
+    await storage.updateGame(gameId, {
+      usedQuestions: [],
+      categoryProgress: {}
+    });
+    return getSmartQuestion(type, gameId);
+  }
+  
+  // Find categories with minimum usage for fair distribution
+  const categoryUsage = availableQuestions.reduce((acc, q) => {
+    acc[q.category] = (categoryProgress[q.category] || 0);
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const minUsage = Math.min(...Object.values(categoryUsage));
+  const preferredQuestions = availableQuestions.filter(q => 
+    (categoryProgress[q.category] || 0) === minUsage
+  );
+  
+  // Select random question from preferred category pool
+  const selectedQuestion = preferredQuestions[Math.floor(Math.random() * preferredQuestions.length)];
+  const questionIndex = pool.indexOf(selectedQuestion);
+  const questionId = `${type}_${questionIndex}`;
+  
+  // Update tracking
+  const newUsedQuestions = [...usedQuestions, questionId];
+  const newCategoryProgress = { ...categoryProgress };
+  newCategoryProgress[selectedQuestion.category] = (newCategoryProgress[selectedQuestion.category] || 0) + 1;
+  
+  await storage.updateGame(gameId, {
+    usedQuestions: newUsedQuestions,
+    categoryProgress: newCategoryProgress
+  });
+  
   return {
-    ...fallbackQuestion,
+    id: questionId,
+    text: selectedQuestion.text,
+    options: selectedQuestion.options || undefined,
+    correct: selectedQuestion.correct,
+    category: selectedQuestion.category,
     type
   };
 }
@@ -217,13 +278,17 @@ async function processGame(gameId: number) {
     const noAnswerPlayers = playerIds.filter(id => !answeredPlayerIds.includes(id));
     
     // Auto-save "no answer" for players who didn't respond
+    const questionData = game.questionData as any;
     for (const playerId of noAnswerPlayers) {
       await storage.createAnswer({
         gameId,
         playerId,
         round: currentRound!,
         question: currentQuestion!,
-        answer: "no_answer"
+        answer: "no_answer",
+        questionId: questionData?.id || `timeout_${currentRound}_${currentQuestion}`,
+        questionText: questionData?.text || 'Question text not available',
+        correctAnswer: questionData?.correct?.toString() || 'Unknown'
       });
     }
     
@@ -273,10 +338,10 @@ async function processGame(gameId: number) {
 
   // Execute decision
   if (shouldContinueToQ2) {
-    console.log(`Q1 results - showing for 5 seconds before Q2...`);
+    console.log(`Q1 results - showing for 4 seconds before Q2...`);
     
-    // Pre-load next question data
-    const nextQuestionData = await getRandomQuestion('integer');
+    // Pre-load next question data with smart selection
+    const nextQuestionData = await getSmartQuestion('integer', gameId);
     
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
@@ -284,7 +349,7 @@ async function processGame(gameId: number) {
       lastRoundWinnerId: null // No round winner yet
     });
     
-    // Show results for 5 seconds, then move to Q2
+    // Show results for 4 seconds, then move to Q2
     setTimeout(async () => {
       // Start Q2 with pre-loaded data
       const deadline = new Date(Date.now() + 15000);
@@ -303,20 +368,20 @@ async function processGame(gameId: number) {
         console.log(`Time's up for R${currentRound}Q2`);
         await processGame(gameId);
       }, 15000);
-    }, 5000);
+    }, 4000);
   } else if (roundComplete) {
     // Show results before completing round
-    console.log(`Round ${currentRound} complete - showing results for 5 seconds...`);
+    console.log(`Round ${currentRound} complete - showing results for 4 seconds...`);
     await storage.updateGame(gameId, { 
       waitingForAnswers: false,
       status: 'showing_results',
       lastRoundWinnerId: roundWinner
     });
     
-    // Show results for 5 seconds, then complete round
+    // Show results for 4 seconds, then complete round
     setTimeout(async () => {
       await completeRound(gameId, currentRound!, roundWinner);
-    }, 5000);
+    }, 4000);
   }
 
   await storage.updateGame(gameId, { 
@@ -431,7 +496,7 @@ async function completeRound(gameId: number, round: number, winnerId: number | n
   }
   
   // No winner yet, prepare and pre-load next round
-  const nextQuestionData = await getRandomQuestion('multiple_choice');
+  const nextQuestionData = await getSmartQuestion('multiple_choice', gameId);
   
   // Start next round immediately after current results display ends
   console.log(`Starting next round (${round + 1})...`);
@@ -473,9 +538,9 @@ async function finishGame(gameId: number, winnerId: number | null) {
 async function startQuestion(gameId: number, round: number, question: number) {
   console.log(`=== STARTING R${round}Q${question} ===`);
   
-  // Get random question for now until we have the database column
+  // Get smart question with fair category coverage
   const questionType = question === 1 ? 'multiple_choice' : 'integer';
-  const questionData = await getRandomQuestion(questionType);
+  const questionData = await getSmartQuestion(questionType, gameId);
   const deadline = new Date(Date.now() + 15000);
   
   await storage.updateGame(gameId, {
@@ -488,7 +553,7 @@ async function startQuestion(gameId: number, round: number, question: number) {
     lastRoundWinnerId: null
   });
 
-  console.log(`Q${question} started: "${questionData.text}"`);
+  console.log(`Q${question} started: "${questionData.text}" [${questionData.category}]`);
 
   // Auto-process when time expires
   setTimeout(async () => {
@@ -739,12 +804,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already answered" });
       }
       
+      // Store answer with question information for history
+      const questionData = game.questionData as any;
       const answerRecord = await storage.createAnswer({
         gameId,
         playerId: player.id,
         round: game.currentRound!,
         question: game.currentQuestion!,
         answer: answer.toString(),
+        questionId: questionData?.id || `fallback_${game.currentRound}_${game.currentQuestion}`,
+        questionText: questionData?.text || 'Question text not available',
+        correctAnswer: questionData?.correct?.toString() || 'Unknown'
       });
       
       // Check if this completes the round

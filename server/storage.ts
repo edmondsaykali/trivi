@@ -72,7 +72,8 @@ export class MemStorage implements IStorage {
       currentRound: insertGame.currentRound || null,
       currentQuestion: insertGame.currentQuestion || null,
       questionData: insertGame.questionData || null,
-      allRoundQuestions: insertGame.allRoundQuestions || null,
+      usedQuestions: insertGame.usedQuestions || [],
+      categoryProgress: insertGame.categoryProgress || {},
       questionDeadline: insertGame.questionDeadline || null,
       lastRoundWinnerId: insertGame.lastRoundWinnerId || null,
       waitingForAnswers: insertGame.waitingForAnswers || null,
@@ -183,6 +184,9 @@ export class MemStorage implements IStorage {
       id,
       submittedAt: new Date(),
       isCorrect: null,
+      questionId: insertAnswer.questionId || null,
+      questionText: insertAnswer.questionText || null,
+      correctAnswer: insertAnswer.correctAnswer || null,
     };
     this.answers.set(id, answer);
     return answer;
