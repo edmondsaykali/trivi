@@ -479,8 +479,8 @@ async function initializeDatabase() {
   }
 }
 
-// Database-only storage - Supabase is the single source of truth
-export const storage = new DatabaseStorage();
+// Switch to memory storage for better performance
+export const storage = new MemStorage();
 
 // Initialize database tables on startup (non-blocking)
 let databaseReady = false;
